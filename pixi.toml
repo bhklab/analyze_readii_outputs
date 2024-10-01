@@ -10,3 +10,6 @@ version = "0.1.0"
 
 [dependencies]
 python = ">=3.12.6,<4"
+pandas = ">=2.2.3,<3"
+ipykernel = ">=6.29.5,<7"
+pyyaml = ">=6.0.2,<7"
