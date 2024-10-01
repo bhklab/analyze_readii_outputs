@@ -5,3 +5,8 @@
 rawdata
 procdata
 results
+
+
+.vscode
+
+*cpython*
