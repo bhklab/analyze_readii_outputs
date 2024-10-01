@@ -1,0 +1,12 @@
+[project]
+authors = ["Katy Scott <k.l.scott16@gmail.com>"]
+channels = ["conda-forge"]
+description = "Add a short description here"
+name = "analyze_readii_outputs"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+python = ">=3.12.6,<4"
