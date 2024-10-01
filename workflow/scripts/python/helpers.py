@@ -61,7 +61,7 @@ def getPatientIdentifierLabel(dataframeToSearch:pd.DataFrame) -> str:
     patIdentifier = dataframeToSearch.filter(regex=regexSearchTerm).columns.to_list()
 
     if len(patIdentifier) > 1:
-        print("Multiple patient identifier labels found. Using the first one.")
+        print(f"Multiple patient identifier labels found. Using {patIdentifier[0]}.")
     
     elif len(patIdentifier) == 0:
         raise ValueError("Dataframe doesn't have a recognizeable patient ID column. Must contain patient or case ID.")
@@ -114,3 +114,39 @@ def subsetDataframe(dataframe:pd.DataFrame,
     except Exception as e:
         print(f"An error occurred: {e}")
         return None
+    
+
+def getOnlyPyradiomicsFeatures(dfPyradiomicsFeatures:DataFrame):
+    """ Function to get out just the features from a Pyradiomics output that includes metadata/diagnostics columns before the features.
+        Assumes the features start after the last metadata/diagnostics column.
+    Parameters
+    ----------
+    dfPyradiomicsFeatures : DataFrame
+        Dataframe of Pyradiomics features with diagnostics and other columns before the features
+    
+    Returns
+    -------
+    featsOnlyRadiomics : DataFrame
+        Dataframe with just the radiomic features
+    
+    """
+    # Find all the columns that begin with diagnostics
+    diagnosticRadiomics = dfPyradiomicsFeatures.filter(regex=r"diagnostics_*")
+
+    if not diagnosticRadiomics.empty:
+        # Get the last diagnostics column index - the features begin in the next column
+        lastDiagnosticIdx = dfPyradiomicsFeatures.columns.get_loc(diagnosticRadiomics.columns[-1])
+        # Drop all the columns before the features start
+        featsOnlyRadiomics = dfPyradiomicsFeatures.iloc[:, lastDiagnosticIdx+1:]
+
+    else:
+        originalRadiomics = dfPyradiomicsFeatures.filter(regex=r'^original_*')
+        if not originalRadiomics.empty:
+            # Get the first original feature column index - the features begin in this column
+            firstOriginalIdx = dfPyradiomicsFeatures.columns.get_loc(originalRadiomics.columns[0])
+            # Drop all the columns before the features start
+            featsOnlyRadiomics = dfPyradiomicsFeatures.iloc[:, firstOriginalIdx:]
+        else:
+            raise ValueError("PyRadiomics file doesn't contain any diagnostics or original feature columns, so can't find beginning of features.")
+
+    return featsOnlyRadiomics
