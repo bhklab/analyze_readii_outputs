@@ -145,6 +145,8 @@ setupOutcomeStatus <- function(datasetConfig){
 
 createSignature <- function(configFilePath, signatureName, outputDir, test = FALSE) { #nolint
     datasetConfig <- read_yaml(configFilePath)
+    # Name of the dataset to run CPH on
+    datasetName <- datasetConfig$dataset_name
 
     # Signature setup - get the signature features and weights
     signature <- signatureYAMLSetup(signatureName)
@@ -156,23 +158,22 @@ createSignature <- function(configFilePath, signatureName, outputDir, test = FAL
     }
 
     # Path to directory containing radiomics features
-    featureDirPath <- datasetConfig$output_dir_path
-    # Name of the dataset to run CPH on
-    datasetName <- datasetConfig$dataset_name
+    featureDirPath <- paste("../../../procdata", datasetName, "all_features", sep="/") #, "test/labelled_readii/", sep="/") 
+    
 
     # Determine whether to load data as train test split or not
-    if (datasetConfig$train_test_split$split == "True") {
-        trainDirPath <- paste(featureDirPath, "/training/all_features/training_labeled_radiomic_features_", datasetName, ".csv", sep = "")
+    if (datasetConfig$train_test_split$split == TRUE) {
+        trainDirPath <- paste(featureDirPath, "/train/labelled_readii/training_labelled_radiomicfeatures_original_", datasetName, ".csv", sep = "")
     } else {
         print("Dataset must have a training subset to create a signature.")
         stop()
     }
 
-    outcomeLabels <- setupOutcomeStatus(datasetConfig)
+    # outcomeLabels <- setupOutcomeStatus(datasetConfig)
 
     trainedWeights <- trainCoxModel(csvTrainingFeatures = trainDirPath,
-                                    survTimeLabel = outcomeLabels$timeLabel,
-                                    survEventLabel = outcomeLabels$eventLabel,
+                                    survTimeLabel = "survival_time_in_years",
+                                    survEventLabel = "survival_event_binary",
                                     modelFeatureList = sigFeatureNames)
 
     saveSignature(signatureName = signatureName,
@@ -256,7 +257,7 @@ applySignature <- function(configFilePath, signatureName) { #nolint
 # Negative controls - list of negative controls to run CPH on
 # Model features - list of features to use for CPH model
 # Model weights - matrix of weights to apply for trained CPH model
-datasetConfigPath <- "../../config/RADCURE.yaml"
+datasetConfigPath <- "../../config/Head-Neck-Radiomics-HN1.yaml"
 signatureName <- "aerts"
 outputDir <- "../../signatures"
 
