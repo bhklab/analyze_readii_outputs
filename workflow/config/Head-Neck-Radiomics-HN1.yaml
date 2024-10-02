@@ -6,9 +6,11 @@ dataset_name: Head-Neck-Radiomics-HN1
 outcome_variables:
     time_label: "overall_survival_in_days"
     event_label: "event_overall_survival"
-    event_values: [0, 1]
     convert_to_years: True
 
 exclusion_variables: {}
-split_variables: {}
-train_test_split: 0
+
+train_test_split: 
+    split: False
+    split_variables: {}
+    impute: 

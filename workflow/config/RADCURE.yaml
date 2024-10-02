@@ -6,12 +6,11 @@ dataset_name: RADCURE
 outcome_variables:
     time_label: "Length FU"
     event_label: "Status"
-    event_values: ["Alive", "Dead"]
     convert_to_years: False
-  
-need_bool_event: 1
 
 exclusion_variables: {'Ds Site': ['Sarcoma', 'Unknown', 'Paraganglioma', 'Salivary Glands', 'Other', 'benign tumor', 'Orbit', 'Lacrimal gland', 'Skin']}
 
-split_variables: {'RADCURE-challenge': ['training', 'test']}
-train_test_split: 1
+train_test_split:
+    split: True
+    split_variable: {'RADCURE-challenge': ['training', 'test']}
+    impute: 'training'
