@@ -19,3 +19,4 @@ Code for analyzing outputs from the READII package or the readii-orcestra pipeli
     - [ ] Get list of experiments, specifically the negative controls
 - [ ] Make this into a snakemake pipeline
 - [ ] Implement config file creation if one is not present
+- [ ] Move data_setup_for_modelling from scripts into notebooks
