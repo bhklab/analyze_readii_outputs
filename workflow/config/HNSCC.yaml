@@ -1,0 +1,16 @@
+# Config file for HNSCC
+dataset_name: HNSCC
+
+### CLINICAL VARIABLE INFORMATION ###
+# Event values should be in the order [Alive_value, Dead_value]
+outcome_variables:
+    time_label: "Survival (years)"
+    event_label: "Status"
+    convert_to_years: False
+
+exclusion_variables: {}
+
+train_test_split: 
+    split: False
+    split_variables: {}
+    impute: 
