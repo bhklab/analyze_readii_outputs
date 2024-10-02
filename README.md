@@ -20,3 +20,40 @@ Code for analyzing outputs from the READII package or the readii-orcestra pipeli
 - [ ] Make this into a snakemake pipeline
 - [ ] Implement config file creation if one is not present
 - [ ] Move data_setup_for_modelling from scripts into notebooks
+- [ ] Finish implementing survival time and event setup as functions
+
+
+### Reordering
+- procdata outputs currently organized as follows:
+```raw
+└── procdata
+    └── {DATASETNAME}
+        └──  all_features_data
+            └──  complete
+                ├── clinical
+                ├── readii
+                └── fmcib
+            └── train
+                ├── clinical
+                ├── readii
+                └── fmcib
+            └── test
+                ├── clinical
+                ├── readii
+                └── fmcib
+        └──  {signature_name}_data
+            └──  complete
+                ├── clinical
+                ├── readii
+                └── fmcib
+            └── train
+                ├── clinical
+                ├── readii
+                └── fmcib
+            └── test
+                ├── clinical
+                ├── readii
+                └── fmcib
+```
+
+should reorganize this to be better.
