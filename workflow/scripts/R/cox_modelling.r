@@ -134,13 +134,6 @@ signatureYAMLSetup <- function(signature_name) { #nolint
 }
 
 
-setupOutcomeStatus <- function(dataset_config){
-    time_label <- dataset_config$outcome_variables$time_label
-    event_label <- dataset_config$outcome_status$event_label
-
-    return(list("time_label" = time_label, "event_label" = event_label))
-}
-
 #' Function to train a CoxPH model to make a signature based on a set of radiomic features.
 #' Will return the trained weights for the model.
 #' 
@@ -151,8 +144,6 @@ setupOutcomeStatus <- function(dataset_config){
 #' @param testSignature Boolean to indicate whether to run test data on the signature. The dataset provided must have a training/test split. Default is FALSE.
 #' 
 #' @return vector of trained weights.
-
-
 createSignature <- function(dataset_config_file_path, signature_name, output_dir = "workflow/signatures/", overwrite_signature = FALSE, test_signature = FALSE) { #nolint
     dataset_config <- read_yaml(dataset_config_file_path)
     # Name of the dataset to run CPH on
@@ -202,6 +193,7 @@ createSignature <- function(dataset_config_file_path, signature_name, output_dir
     return(trained_weights)
 
 }
+
 
 #' Function to apply a trained CPH model to a test or validation set of radiomics features
 #' 
