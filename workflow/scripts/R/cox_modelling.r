@@ -45,6 +45,17 @@ loadDataFile <- function(data_file_path) { #nolint
 }
 
 
+#' Function to load in a YAML file with proper checks
+#'
+#' @param yaml_file_path A string path to the file to load.
+#' 
+#' @return A data.table containing the loaded data.
+loadYAMLFile <- function(yaml_file_path) { #nolint
+    checkmate::assertFile(yaml_file_path, access = "r", extension = "yaml")
+    yaml::read_yaml(yaml_file_path)
+}
+
+
 #' Function to train a CoxPH model to make a signature based on a set of features.
 #' Will return the trained weights for the model.
 #' 
@@ -196,10 +207,8 @@ saveSignatureYAML <- function(signature_name, model_feature_weights, output_dir 
 loadSignatureYAML <- function(signature_name) { #nolint 
     # Paste together the path to the signature file
     signature_file_path <- paste("workflow/signatures/", signature_name, ".yaml", sep = "")
-    # Confirm it is a yaml file
-    checkmate::assert_file(signature_file_path, access = "r", extension = "yaml")
     # Load the signature file
-    signature_config <- read_yaml(signature_file_path)
+    signature_config <- loadYAMLFile(signature_file_path)
     # Names of the features in the signature
     sig_feature_names <- names(signature_config$signature)
     # Weights for the features in the signature
@@ -223,7 +232,7 @@ loadSignatureYAML <- function(signature_name) { #nolint
 #' 
 #' @return vector of trained weights.
 createSignature <- function(dataset_config_file_path, signature_name, output_dir = "workflow/signatures/", overwrite_signature = FALSE, test_signature = FALSE) { #nolint
-    dataset_config <- read_yaml(dataset_config_file_path)
+    dataset_config <- loadYAMLFile(dataset_config_file_path)
     # Name of the dataset to run CPH on
     dataset_name <- dataset_config$dataset_name
 
@@ -281,10 +290,9 @@ createSignature <- function(dataset_config_file_path, signature_name, output_dir
 #' 
 #' @return None
 applySignature <- function(dataset_config_file_path, signature_name) { #nolint
-    
-    # Load in config file for the dataset
-    checkmate::assert_file(dataset_config_file_path, access = "r", extension = "yaml")
-    dataset_config <- read_yaml(dataset_config_file_path)
+
+    # Load in the config file for the dataset
+    dataset_config <- loadYAMLFile()(dataset_config_file_path)
 
     # Name of the dataset to run CPH on
     dataset_name <- dataset_config$dataset_name
