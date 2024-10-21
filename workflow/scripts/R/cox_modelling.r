@@ -100,12 +100,33 @@ testCoxModel <- function(csv_testing_features,
 }
 
 
-saveSignature <- function(signature_name, model_feature_weights, output_dir){ #nolint 
-    # Save out model weights for CPH model
-
+#' Function to save out a CPH signature file with the trained weights. A signature file with the names of the features must already exist.
+#' 
+#' @param signature_name Name of the signature to load in signature names from yaml file. Will be saved out with the same name.
+#' @param model_feature_weights Vector of trained weights for the signature. Must have the same number of values as the number of features in the signature.
+#' @param output_dir Directory to save the signature file to. Default is "workflow/signatures/". Must end in a "/".
+#' @param overwrite_signature Boolean to indicate whether to overwrite existing signature weights. Default is FALSE.
+#' 
+#' @return None
+saveSignatureYAML <- function(signature_name, model_feature_weights, output_dir = "workflow/signatures/", overwrite_signature = FALSE){ #nolint 
+    # Load in the signature file to get the feature names
     signature <- loadSignatureYAML(signature_name)
 
-    # Convert model weights to list and set up names
+    # Check if signature weights already exist
+    if (signature$weights[1] != 0) {
+        # Check whether to overwrite the signature weights
+        if (overwrite_signature == TRUE) {
+            print("Signature weights are being overwritten.")
+        } else {
+            print("Signature weights already exist. Set overwriteSignature to TRUE to overwrite.")
+            stop()
+        }
+    }
+
+    # Make sure output directory ends in a "/"
+    if (endsWith(output_dir, "/") == FALSE) { output_dir <- paste(output_dir, "/", sep = "") }
+
+    # Convert model weights to list and set up names from existing signature file
     model_feature_list <- as.list(model_feature_weights)
     names(model_feature_list) <- signature$names
 
@@ -113,13 +134,14 @@ saveSignature <- function(signature_name, model_feature_weights, output_dir){ #n
     final_signature <- list(signature = model_feature_list)
 
     # Setupt output file name
-    output_file <- file(paste(output_dir, "/", signature_name, ".yaml", sep = ""), "w")
+    output_file <- file(paste(output_dir, signature_name, ".yaml", sep = ""), "w")
     # Write out the signature
     write_yaml(final_signature, output_file)
     close(output_file)
 }
 
-#' Function to read in a signature file and get the feature names and weights
+
+#' Function to read in a CPH signature file and get the feature names and weights
 #' 
 #' @param signature_name Name of the signature to read in, should have a signature.yaml file in the signatures folder. Weights are optional in the file.
 #' 
@@ -191,7 +213,8 @@ createSignature <- function(dataset_config_file_path, signature_name, output_dir
     # Save out the model weights for the signature as a yaml file
     saveSignature(signature_name = signature_name,
                   model_feature_weights = trained_weights,
-                  output_dir = output_dir)
+                  output_dir = output_dir,
+                  overwrite_signature = overwrite_signature)
 
     # Apply the signature to the test set if specified
     if (test_signature == TRUE) {
