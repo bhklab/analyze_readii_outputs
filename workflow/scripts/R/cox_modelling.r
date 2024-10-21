@@ -30,7 +30,7 @@ library(yaml)
 # 5. Get weights for model
 # 6. Return the trained CPH model
 
-load_data_file <- function(data_file_path) { #nolint
+loadDataFile <- function(data_file_path) { #nolint
     data_file_type = file_ext(data_file_path)
     if (length(data_file_type) == 0) {
         # No file passed, return 0
@@ -48,7 +48,7 @@ load_data_file <- function(data_file_path) { #nolint
 }
 
 
-train_cox_model <- function(csv_training_features,
+trainCoxModel <- function(csv_training_features,
                             surv_time_label,
                             surv_event_label,
                             model_feature_list){ #nolint
@@ -70,7 +70,7 @@ train_cox_model <- function(csv_training_features,
     return(model_fit$coefficients)
 }
 
-test_cox_model <- function(csv_testing_features,
+testCoxModel <- function(csv_testing_features,
                            surv_time_label,
                            surv_event_label,
                            model_feature_list,
@@ -100,7 +100,7 @@ test_cox_model <- function(csv_testing_features,
 }
 
 
-save_signature <- function(signature_name, model_feature_weights, output_dir){ #nolint 
+saveSignature <- function(signature_name, model_feature_weights, output_dir){ #nolint 
     # Save out model weights for CPH model
 
     signature <- signature_yaml_setup(signature_name)
@@ -120,7 +120,7 @@ save_signature <- function(signature_name, model_feature_weights, output_dir){ #
 }
 
 
-signature_yaml_setup <- function(signature_name) { #nolint 
+signatureYAMLSetup <- function(signature_name) { #nolint 
     signature_config <- read_yaml(paste("workflow/signatures/", signature_name, ".yaml", sep = ""))
     # Names of the features in the signature
     sig_feature_names <- names(signature_config$signature)
@@ -134,19 +134,35 @@ signature_yaml_setup <- function(signature_name) { #nolint
 }
 
 
-setup_outcome_status <- function(dataset_config){
+setupOutcomeStatus <- function(dataset_config){
     time_label <- dataset_config$outcome_variables$time_label
     event_label <- dataset_config$outcome_status$event_label
 
     return(list("time_label" = time_label, "event_label" = event_label))
 }
 
+#' Function to train a CoxPH model to make a signature based on a set of radiomic features.
+#' Will return the trained weights for the model.
+#' 
+#' @param datasetConfigFilePath Path to the config file for the dataset
+#' @param signatureName Name of the signature to train, should have a signature.yaml file in the signatures folder. If this has any weights, they will be overwritten.
+#' @param outputDir Directory to save the trained weights signature file to. Default is "workflow/signatures/".
+#' @param overwriteSignature Boolean to indicate whether to overwrite existing signature weights. Default is FALSE.
+#' @param testSignature Boolean to indicate whether to run test data on the signature. The dataset provided must have a training/test split. Default is FALSE.
+#' 
+#' @return vector of trained weights.
 
 
-create_signature <- function(config_file_path, signature_name, output_dir, test = FALSE) { #nolint
-    dataset_config <- read_yaml(config_file_path)
+createSignature <- function(dataset_config_file_path, signature_name, output_dir = "workflow/signatures/", overwrite_signature = FALSE, test_signature = FALSE) { #nolint
+    dataset_config <- read_yaml(dataset_config_file_path)
     # Name of the dataset to run CPH on
     dataset_name <- dataset_config$dataset_name
+
+    # Check if dataset has a training/test split needed for signature creation
+    if (datasetConfig$train_test_split$split == FALSE) {
+        print("Dataset must have a training subset to create a signature.")
+        stop()
+    }
 
     # Signature setup - get the signature features and weights
     signature <- signature_yaml_setup(signature_name)
@@ -154,35 +170,33 @@ create_signature <- function(config_file_path, signature_name, output_dir, test 
     sig_weights <- signature$weights
 
     if (sig_weights[1] != 0) {
-        print("Signature weights are being overwritten.")
+        # Check whether to overwrite the signature weights
+        if (overwrite_signature == TRUE) {
+            print("Signature weights are being overwritten.")
+        } else {
+            print("Signature weights already exist. Set overwriteSignature to TRUE to overwrite.")
+            stop()
+        }
     }
 
-    # Path to directory containing radiomics features
-    feature_dir_path <- paste("../../../procdata", dataset_name, "all_features", sep="/") #, "test/labelled_readii/", sep="/") 
-    
+    # Path to training radiomics features from the original image (not a negative control)
+    train_feature_file_path <- paste("procdata/", dataset_name, "/radiomics/train_test_split/train_features/train_labelled_radiomicfeatures_only_original_", dataset_name, ".csv", sep = "")
 
-    # Determine whether to load data as train test split or not
-    if (dataset_config$train_test_split$split == TRUE) {
-        train_dir_path <- paste(feature_dir_path, "/train/labelled_readii/training_labelled_radiomicfeatures_original_", dataset_name, ".csv", sep = "")
-    } else {
-        print("Dataset must have a training subset to create a signature.")
-        stop()
-    }
+    # Fit a CoxPH model to the training radiomics features
+    trained_weights <- trainCoxModel(train_feature_file_path,
+                                     survTimeLabel = "survival_time_in_years",
+                                     survEventLabel = "survival_event_binary",
+                                     modelFeatureList = sig_feature_names)
 
-    # outcomeLabels <- setupOutcomeStatus(datasetConfig)
+    # Save out the model weights for the signature as a yaml file
+    saveSignature(signature_name = signature_name,
+                  model_feature_weights = trained_weights,
+                  output_dir = output_dir)
 
-    trained_weights <- train_cox_model(csv_training_features = train_dir_path,
-                                       surv_time_label = "survival_time_in_years",
-                                       surv_event_label = "survival_event_binary",
-                                       model_feature_list = sig_feature_names)
-
-    save_signature(signature_name = signature_name,
-                   model_feature_weights = trained_weights,
-                   output_dir = output_dir)
-
-    if (test == TRUE) {
-        apply_signature(config_file_path = config_file_path,
-                        signature_name = signature_name)
+    # Apply the signature to the test set if specified
+    if (test_signature == TRUE) {
+        applySignature(dataset_config_file_path = dataset_config_file_path,
+                       signature_name = signature_name)
     }
 
     return(trained_weights)
@@ -195,7 +209,7 @@ create_signature <- function(config_file_path, signature_name, output_dir, test 
 #' @param signature_name Name of the signature to apply, should have a signature.yaml file in the signatures folder
 #' 
 #' @return None
-apply_signature <- function(dataset_config_file_path, signature_name) { #nolint
+applySignature <- function(dataset_config_file_path, signature_name) { #nolint
     
     # Load in config file for the dataset
     checkmate::assert_file(dataset_config_file_path, access = "r", extension = "yaml")
@@ -205,7 +219,7 @@ apply_signature <- function(dataset_config_file_path, signature_name) { #nolint
     dataset_name <- dataset_config$dataset_name
 
     # Signature setup - get the signature features and weights
-    signature <- signature_yaml_setup(signature_name)
+    signature <- signatureYAMLSetup(signature_name)
     sig_feature_names <- signature$names
     sig_weights <- signature$weights
 
@@ -226,7 +240,7 @@ apply_signature <- function(dataset_config_file_path, signature_name) { #nolint
     feature_files <- list.files(feature_dir_path, pattern="labelled.*\\.csv$", ignore.case=TRUE, full.names=TRUE)
 
     # Run the signature CPH model on each feature set
-    cph_model_results <- lapply(feature_files, test_cox_model, 
+    cph_model_results <- lapply(feature_files, testCoxModel, 
                                 surv_time_label = "survival_time_in_years",
                                 surv_event_label = "survival_event_binary",
                                 model_feature_list = sig_feature_names,
@@ -252,4 +266,4 @@ signature_name <- "aerts_original"
 output_dir <- "workflow/signatures"
 
 # trained_weights <- create_signature(dataset_config_path, signature_name, output_dir = output_dir, test = TRUE)
-test_results = apply_signature(dataset_config_path, signature_name)
+test_results = applySignature(dataset_config_path, signature_name)
