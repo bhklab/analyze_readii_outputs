@@ -119,7 +119,7 @@ testCoxModel <- function(test_labelled_features_file_path,
                          model_feature_weights){ #nolint
 
     # Load the feature data as a dataframe
-    labelled_feature_data <- loadDataFile(test_features_file_path)
+    labelled_feature_data <- loadDataFile(test_labelled_features_file_path)
     
     # Get only features selected for the model
     test_feature_data <- tryCatch({
@@ -292,7 +292,7 @@ createSignature <- function(dataset_config_file_path, signature_name, output_dir
 applySignature <- function(dataset_config_file_path, signature_name) { #nolint
 
     # Load in the config file for the dataset
-    dataset_config <- loadYAMLFile()(dataset_config_file_path)
+    dataset_config <- loadYAMLFile(dataset_config_file_path)
 
     # Name of the dataset to run CPH on
     dataset_name <- dataset_config$dataset_name
@@ -340,9 +340,9 @@ applySignature <- function(dataset_config_file_path, signature_name) { #nolint
 # Negative controls - list of negative controls to run CPH on
 # Model features - list of features to use for CPH model
 # Model weights - matrix of weights to apply for trained CPH model
-# dataset_config_path <- "workflow/config/Head-Neck-Radiomics-HN1.yaml"
-# signature_name <- "aerts_original"
-# output_dir <- "workflow/signatures"
+dataset_config_path <- "workflow/config/Head-Neck-Radiomics-HN1.yaml"
+signature_name <- "aerts_original"
+output_dir <- "workflow/signatures"
 
 # # trained_weights <- create_signature(dataset_config_path, signature_name, output_dir = output_dir, test = TRUE)
-# test_results = applySignature(dataset_config_path, signature_name)
+test_results = applySignature(dataset_config_path, signature_name)
