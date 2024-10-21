@@ -30,140 +30,140 @@ library(yaml)
 # 5. Get weights for model
 # 6. Return the trained CPH model
 
-loadDataFile <- function(dataFilePath) { #nolint
-    dataFileType = file_ext(dataFilePath)
-    if (length(dataFileType) == 0) {
+load_data_file <- function(data_file_path) { #nolint
+    data_file_type = file_ext(data_file_path)
+    if (length(data_file_type) == 0) {
         # No file passed, return 0
         return(NULL)
     }
-    if (dataFileType == "csv") {
-        loadedDataframe <- read.csv(dataFilePath, header = TRUE, sep = ",", check.names = FALSE)
-    } else if (dataFileType == "xlsx") {
-        loadedDataframe <- read_excel(dataFilePath)
+    if (data_file_type == "csv") {
+        loaded_dataframe <- read.csv(data_file_path, header = TRUE, sep = ",", check.names = FALSE)
+    } else if (data_file_type == "xlsx") {
+        loaded_dataframe <- read_excel(data_file_path)
     } else {
         stop("Radiogenomic data file must be a .csv or .xlsx.")
     }
 
-    return(loadedDataframe)
+    return(loaded_dataframe)
 }
 
 
-trainCoxModel <- function(csvTrainingFeatures,
-                          survTimeLabel,
-                          survEventLabel,
-                          modelFeatureList){ #nolint
+train_cox_model <- function(csv_training_features,
+                            surv_time_label,
+                            surv_event_label,
+                            model_feature_list){ #nolint
 
-    trainRadiomicsData <- loadDataFile(csvTrainingFeatures)
+    train_radiomics_data <- load_data_file(csv_training_features)
 
-    timeData <- trainRadiomicsData[, survTimeLabel]
-    eventData <- trainRadiomicsData[, survEventLabel]
+    time_data <- train_radiomics_data[, surv_time_label]
+    event_data <- train_radiomics_data[, surv_event_label]
 
-    trainModelFeatures <- as.data.frame(trainRadiomicsData[, modelFeatureList])
+    train_model_features <- as.data.frame(train_radiomics_data[, model_feature_list])
 
-    model.fit <- coxph(Surv(timeData, eventData) ~ .,
+    model_fit <- coxph(Surv(time_data, event_data) ~ .,
                        x = TRUE,
                        y = TRUE,
                        method = "breslow",
-                       data = trainModelFeatures)
+                       data = train_model_features)
 
     # Get weights from model and return those two
-    return(model.fit$coefficients)
+    return(model_fit$coefficients)
 }
 
-testCoxModel <- function(csvTestingFeatures,
-                         survTimeLabel,
-                         survEventLabel,
-                         modelFeatureList,
-                         modelFeatureWeights){ #nolint
+test_cox_model <- function(csv_testing_features,
+                           surv_time_label,
+                           surv_event_label,
+                           model_feature_list,
+                           model_feature_weights){ #nolint
 
-    testRadiomicsData <- loadDataFile(csvTestingFeatures)
+    test_radiomics_data <- load_data_file(csv_testing_features)
 
     # INSERT CHECK FOR RADIOMIC COLUMNS AND MODELFEATURELIST
 
-    testRadiomicFeatures <- testRadiomicsData[, modelFeatureList]
+    test_radiomic_features <- test_radiomics_data[, model_feature_list]
 
-    testRadMatrix <- data.matrix(testRadiomicFeatures)
+    test_rad_matrix <- data.matrix(test_radiomic_features)
 
-    radiomicHazards <- testRadMatrix %*% modelFeatureWeights
+    radiomic_hazards <- test_rad_matrix %*% model_feature_weights
 
-    timeLabel <- testRadiomicsData[, survTimeLabel]
-    eventLabel <- testRadiomicsData[, survEventLabel]
+    time_label <- test_radiomics_data[, surv_time_label]
+    event_label <- test_radiomics_data[, surv_event_label]
 
-    performanceResults <- concordance.index(x = radiomicHazards,
-                                            surv.time = timeLabel,
-                                            surv.event = eventLabel,
-                                            method = "noether",
-                                            alpha = 0.5,
-                                            alternative = "two.sided")
+    performance_results <- concordance.index(x = radiomic_hazards,
+                                             surv.time = time_label,
+                                             surv.event = event_label,
+                                             method = "noether",
+                                             alpha = 0.5,
+                                             alternative = "two.sided")
 
-    return(performanceResults)
+    return(performance_results)
 }
 
 
-saveSignature <- function(signatureName, modelFeatureWeights, outputDir){ #nolint 
+save_signature <- function(signature_name, model_feature_weights, output_dir){ #nolint 
     # Save out model weights for CPH model
 
-    signature <- signatureYAMLSetup(signatureName)
+    signature <- signature_yaml_setup(signature_name)
 
     # Convert model weights to list and set up names
-    modelFeatureList <- as.list(modelFeatureWeights)
-    names(modelFeatureList) <- signature$names
+    model_feature_list <- as.list(model_feature_weights)
+    names(model_feature_list) <- signature$names
 
     # Name the signature so ouptut is correctly formatted
-    finalSignature <- list(signature = modelFeatureList)
+    final_signature <- list(signature = model_feature_list)
 
     # Setupt output file name
-    outputFile <- file(paste(outputDir, "/", signatureName, ".yaml", sep = ""), "w")
+    output_file <- file(paste(output_dir, "/", signature_name, ".yaml", sep = ""), "w")
     # Write out the signature
-    write_yaml(finalSignature, outputFile)
-    close(outputFile)
+    write_yaml(final_signature, output_file)
+    close(output_file)
 }
 
 
-signatureYAMLSetup <- function(signatureName) { #nolint 
-    signatureConfig <- read_yaml(paste("workflow/signatures/", signatureName, ".yaml", sep = ""))
+signature_yaml_setup <- function(signature_name) { #nolint 
+    signature_config <- read_yaml(paste("workflow/signatures/", signature_name, ".yaml", sep = ""))
     # Names of the features in the signature
-    sigFeatureNames <- names(signatureConfig$signature)
+    sig_feature_names <- names(signature_config$signature)
     # Weights for the features in the signature
-    sigWeights <- matrix(unlist(signatureConfig$signature))
+    sig_weights <- matrix(unlist(signature_config$signature))
 
-    signature <- list(sigFeatureNames, sigWeights)
+    signature <- list(sig_feature_names, sig_weights)
     names(signature) <- c("names", "weights")
 
     return(signature)
 }
 
 
-setupOutcomeStatus <- function(datasetConfig){
-    timeLabel <- datasetConfig$outcome_variables$time_label
-    eventLabel <- datasetConfig$outcome_status$event_label
+setup_outcome_status <- function(dataset_config){
+    time_label <- dataset_config$outcome_variables$time_label
+    event_label <- dataset_config$outcome_status$event_label
 
-    return(list("timeLabel" = timeLabel, "eventLabel" = eventLabel))
+    return(list("time_label" = time_label, "event_label" = event_label))
 }
 
 
 
-createSignature <- function(configFilePath, signatureName, outputDir, test = FALSE) { #nolint
-    datasetConfig <- read_yaml(configFilePath)
+create_signature <- function(config_file_path, signature_name, output_dir, test = FALSE) { #nolint
+    dataset_config <- read_yaml(config_file_path)
     # Name of the dataset to run CPH on
-    datasetName <- datasetConfig$dataset_name
+    dataset_name <- dataset_config$dataset_name
 
     # Signature setup - get the signature features and weights
-    signature <- signatureYAMLSetup(signatureName)
-    sigFeatureNames <- signature$names
-    sigWeights <- signature$weights
+    signature <- signature_yaml_setup(signature_name)
+    sig_feature_names <- signature$names
+    sig_weights <- signature$weights
 
-    if (sigWeights[1] != 0) {
+    if (sig_weights[1] != 0) {
         print("Signature weights are being overwritten.")
     }
 
     # Path to directory containing radiomics features
-    featureDirPath <- paste("../../../procdata", datasetName, "all_features", sep="/") #, "test/labelled_readii/", sep="/") 
+    feature_dir_path <- paste("../../../procdata", dataset_name, "all_features", sep="/") #, "test/labelled_readii/", sep="/") 
     
 
     # Determine whether to load data as train test split or not
-    if (datasetConfig$train_test_split$split == TRUE) {
-        trainDirPath <- paste(featureDirPath, "/train/labelled_readii/training_labelled_radiomicfeatures_original_", datasetName, ".csv", sep = "")
+    if (dataset_config$train_test_split$split == TRUE) {
+        train_dir_path <- paste(feature_dir_path, "/train/labelled_readii/training_labelled_radiomicfeatures_original_", dataset_name, ".csv", sep = "")
     } else {
         print("Dataset must have a training subset to create a signature.")
         stop()
@@ -171,73 +171,73 @@ createSignature <- function(configFilePath, signatureName, outputDir, test = FAL
 
     # outcomeLabels <- setupOutcomeStatus(datasetConfig)
 
-    trainedWeights <- trainCoxModel(csvTrainingFeatures = trainDirPath,
-                                    survTimeLabel = "survival_time_in_years",
-                                    survEventLabel = "survival_event_binary",
-                                    modelFeatureList = sigFeatureNames)
+    trained_weights <- train_cox_model(csv_training_features = train_dir_path,
+                                       surv_time_label = "survival_time_in_years",
+                                       surv_event_label = "survival_event_binary",
+                                       model_feature_list = sig_feature_names)
 
-    saveSignature(signatureName = signatureName,
-                  modelFeatureWeights = trainedWeights,
-                  outputDir = outputDir)
+    save_signature(signature_name = signature_name,
+                   model_feature_weights = trained_weights,
+                   output_dir = output_dir)
 
     if (test == TRUE) {
-        applySignature(configFilePath = configFilePath,
-                       signatureName = signatureName)
+        apply_signature(config_file_path = config_file_path,
+                        signature_name = signature_name)
     }
 
-    return(trainedWeights)
+    return(trained_weights)
 
 }
 
 #' Function to apply a trained CPH model to a test or validation set of radiomics features
 #' 
-#' @param datasetConfigFilePath Path to the config file for the dataset
-#' @param signatureName Name of the signature to apply, should have a signature.yaml file in the signatures folder
+#' @param dataset_config_file_path Path to the config file for the dataset
+#' @param signature_name Name of the signature to apply, should have a signature.yaml file in the signatures folder
 #' 
 #' @return None
-applySignature <- function(datasetConfigFilePath, signatureName) { #nolint
+apply_signature <- function(dataset_config_file_path, signature_name) { #nolint
     
     # Load in config file for the dataset
-    checkmate::assertFile(datasetConfigFilePath, access = "r", extension = "yaml")
-    datasetConfig <- read_yaml(datasetConfigFilePath)
+    checkmate::assert_file(dataset_config_file_path, access = "r", extension = "yaml")
+    dataset_config <- read_yaml(dataset_config_file_path)
 
     # Name of the dataset to run CPH on
-    datasetName <- datasetConfig$dataset_name
+    dataset_name <- dataset_config$dataset_name
 
     # Signature setup - get the signature features and weights
-    signature <- signatureYAMLSetup(signatureName)
-    sigFeatureNames <- signature$names
-    sigWeights <- signature$weights
+    signature <- signature_yaml_setup(signature_name)
+    sig_feature_names <- signature$names
+    sig_weights <- signature$weights
 
-    print(paste("DATASET: ", datasetName))
-    print(paste("SIGNATURE: ", signatureName))
+    print(paste("DATASET: ", dataset_name))
+    print(paste("SIGNATURE: ", signature_name))
 
     # Check if applying signature to test or validation set based on training/test split
-    if (datasetConfig$train_test_split$split == TRUE) {
+    if (dataset_config$train_test_split$split == TRUE) {
         # Path to directory containing test radiomics features
-        featureDirPath <- paste0("procdata/", datasetName, "/radiomics/train_test_split/test_features", sep="")
+        feature_dir_path <- paste0("procdata/", dataset_name, "/radiomics/train_test_split/test_features", sep="")
     } else {
         # Path to directory containing validation radiomics features
-        featureDirPath <- paste0("procdata/", datasetName, "/radiomics/features", sep="")
+        feature_dir_path <- paste0("procdata/", dataset_name, "/radiomics/features", sep="")
     }
 
     # Get relative paths to all radiomic feature files containing the outcome labels and save in character vector
     # test set will be test_labelled_radiomicfeatures_* and validation set will be train_labelled_radiomicfeatures_*
-    featureFiles <- list.files(featureDirPath, pattern="labelled.*\\.csv$", ignore.case=TRUE, full.names=TRUE)
+    feature_files <- list.files(feature_dir_path, pattern="labelled.*\\.csv$", ignore.case=TRUE, full.names=TRUE)
 
     # Run the signature CPH model on each feature set
-    cphModelResults <- lapply(featureFiles, testCoxModel, 
-                              survTimeLabel = "survival_time_in_years",
-                              survEventLabel = "survival_event_binary",
-                              modelFeatureList = sigFeatureNames,
-                              modelFeatureWeights = sigWeights)
+    cph_model_results <- lapply(feature_files, test_cox_model, 
+                                surv_time_label = "survival_time_in_years",
+                                surv_event_label = "survival_event_binary",
+                                model_feature_list = sig_feature_names,
+                                model_feature_weights = sig_weights)
 
     #TODO: update this to just be the file name, not the full path
     # Make the file path of the feature file the name of the list element
-    names(cphModelResults) <- featureFiles
+    names(cph_model_results) <- feature_files
 
     # Return the list of results
-    return(cphModelResults)
+    return(cph_model_results)
 }
 
 
@@ -247,9 +247,9 @@ applySignature <- function(datasetConfigFilePath, signatureName) { #nolint
 # Negative controls - list of negative controls to run CPH on
 # Model features - list of features to use for CPH model
 # Model weights - matrix of weights to apply for trained CPH model
-datasetConfigPath <- "workflow/config/Head-Neck-Radiomics-HN1.yaml"
-signatureName <- "aerts_original"
-outputDir <- "workflow/signatures"
+dataset_config_path <- "workflow/config/Head-Neck-Radiomics-HN1.yaml"
+signature_name <- "aerts_original"
+output_dir <- "workflow/signatures"
 
-# trainedWeights <- createSignature(datasetConfigPath, signatureName, outputDir = outputDir, test = TRUE)
-testResults = applySignature(datasetConfigPath, signatureName)
+# trained_weights <- create_signature(dataset_config_path, signature_name, output_dir = output_dir, test = TRUE)
+test_results = apply_signature(dataset_config_path, signature_name)
