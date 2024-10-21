@@ -1,8 +1,8 @@
 library(survival)
 library(survcomp)
-library(readxl)
+# library(readxl)
 library(tools)
-library(yaml)
+# library(yaml)
 
 ##### VARIABLES #####
 # Main directory - directory containing labelled feature csvs
@@ -30,22 +30,20 @@ library(yaml)
 # 5. Get weights for model
 # 6. Return the trained CPH model
 
+#' Function to load in the feature data file for CPH model training or testing
+#'
+#' @param data_file_path A string path to the file to load.
+#' 
+#' @return A data.table containing the loaded data.
 loadDataFile <- function(data_file_path) { #nolint
-    data_file_type = file_ext(data_file_path)
-    if (length(data_file_type) == 0) {
-        # No file passed, return 0
-        return(NULL)
-    }
-    if (data_file_type == "csv") {
-        loaded_dataframe <- read.csv(data_file_path, header = TRUE, sep = ",", check.names = FALSE)
-    } else if (data_file_type == "xlsx") {
-        loaded_dataframe <- read_excel(data_file_path)
-    } else {
-        stop("Radiogenomic data file must be a .csv or .xlsx.")
-    }
+    checkmate::assertFile(data_file_path, access = "r", extension = c("csv", "xlsx"))
 
-    return(loaded_dataframe)
+    switch(tools::file_ext(data_file_path),
+        "csv" = read.csv(data_file_path, header = TRUE, sep = ",", check.names = FALSE),
+        "xlsx" = readxl::read_excel(data_file_path)
+    ) 
 }
+
 
 #' Function to train a CoxPH model to make a signature based on a set of features.
 #' Will return the trained weights for the model.
@@ -334,9 +332,9 @@ applySignature <- function(dataset_config_file_path, signature_name) { #nolint
 # Negative controls - list of negative controls to run CPH on
 # Model features - list of features to use for CPH model
 # Model weights - matrix of weights to apply for trained CPH model
-dataset_config_path <- "workflow/config/Head-Neck-Radiomics-HN1.yaml"
-signature_name <- "aerts_original"
-output_dir <- "workflow/signatures"
+# dataset_config_path <- "workflow/config/Head-Neck-Radiomics-HN1.yaml"
+# signature_name <- "aerts_original"
+# output_dir <- "workflow/signatures"
 
-# trained_weights <- create_signature(dataset_config_path, signature_name, output_dir = output_dir, test = TRUE)
-test_results = applySignature(dataset_config_path, signature_name)
+# # trained_weights <- create_signature(dataset_config_path, signature_name, output_dir = output_dir, test = TRUE)
+# test_results = applySignature(dataset_config_path, signature_name)
