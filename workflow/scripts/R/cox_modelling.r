@@ -1,9 +1,6 @@
 library(survival)
 library(survcomp)
-# library(readxl)
 library(tools)
-# library(yaml)
-
 ##### VARIABLES #####
 # Main directory - directory containing labelled feature csvs
 # Negative controls - list of negative controls to run CPH on
@@ -97,7 +94,7 @@ trainCoxModel <- function(train_labelled_features_file_path,
                        x = TRUE,
                        y = TRUE,
                        method = "breslow",
-                       data = train_features_data)
+                       data = train_feature_data)
 
     # Get weights from model and return them
     return(model_fit$coefficients)
@@ -194,7 +191,7 @@ saveSignatureYAML <- function(signature_name, model_feature_weights, output_dir 
     # Setupt output file name
     output_file <- file(paste(output_dir, signature_name, ".yaml", sep = ""), "w")
     # Write out the signature
-    write_yaml(final_signature, output_file)
+    yaml::write_yaml(final_signature, output_file)
     close(output_file)
 }
 
@@ -237,7 +234,7 @@ createSignature <- function(dataset_config_file_path, signature_name, output_dir
     dataset_name <- dataset_config$dataset_name
 
     # Check if dataset has a training/test split needed for signature creation
-    if (datasetConfig$train_test_split$split == FALSE) {
+    if (dataset_config$train_test_split$split == FALSE) {
         print("Dataset must have a training subset to create a signature.")
         stop()
     }
@@ -262,9 +259,9 @@ createSignature <- function(dataset_config_file_path, signature_name, output_dir
 
     # Fit a CoxPH model to the training radiomics features
     trained_weights <- trainCoxModel(train_feature_file_path,
-                                     survTimeLabel = "survival_time_in_years",
-                                     survEventLabel = "survival_event_binary",
-                                     modelFeatureList = sig_feature_names)
+                                     surv_time_label = "survival_time_in_years",
+                                     surv_event_label = "survival_event_binary",
+                                     model_feature_list = sig_feature_names)
 
     # Save out the model weights for the signature as a yaml file
     saveSignatureYAML(signature_name = signature_name,
@@ -332,8 +329,6 @@ applySignature <- function(dataset_config_file_path, signature_name) { #nolint
     # Return the list of results
     return(cph_model_results)
 }
-
-
 
 ##### VARIABLES #####
 # Main directory - directory containing labelled feature csvs
