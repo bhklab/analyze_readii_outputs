@@ -1,31 +1,6 @@
 library(survival)
 library(survcomp)
 library(tools)
-##### VARIABLES #####
-# Main directory - directory containing labelled feature csvs
-# Negative controls - list of negative controls to run CPH on
-# Model features - list of features to use for CPH model
-# Model weights - matrix of weights to apply for trained CPH model
-
-
-###### STEPS #######
-# Pretrained CPH Model
-# 1. Load csv file for testing patient set
-# 2. Drop the patient ID and survival labels from the dataframe
-# 3. Confirm that features in model features list match the radiomics
-# 3. Convert the features dataframe to a data.matrix
-# 4. Multiple the weight matrix by the features
-# 5. Set up time and event label
-# 6. Calculate concordance index 
-
-
-# From scratch CPH Model training
-# 1. Load csv file of training patient set 
-# 2. Drop the patient ID and survival labels from the dataframe
-# 3. Confirm that features in model features list match the radiomics
-# 4. Fit cph model with the select features with the training set
-# 5. Get weights for model
-# 6. Return the trained CPH model
 
 #' Function to load in the feature data file for CPH model training or testing
 #'
@@ -329,15 +304,3 @@ applySignature <- function(dataset_config_file_path, signature_name) { #nolint
     # Return the list of results
     return(cph_model_results)
 }
-
-##### VARIABLES #####
-# Main directory - directory containing labelled feature csvs
-# Negative controls - list of negative controls to run CPH on
-# Model features - list of features to use for CPH model
-# Model weights - matrix of weights to apply for trained CPH model
-dataset_config_path <- "workflow/config/Head-Neck-Radiomics-HN1.yaml"
-signature_name <- "aerts_original"
-output_dir <- "workflow/signatures"
-
-# # trained_weights <- create_signature(dataset_config_path, signature_name, output_dir = output_dir, test = TRUE)
-test_results = applySignature(dataset_config_path, signature_name)
