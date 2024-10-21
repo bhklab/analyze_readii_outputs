@@ -103,7 +103,7 @@ testCoxModel <- function(csv_testing_features,
 saveSignature <- function(signature_name, model_feature_weights, output_dir){ #nolint 
     # Save out model weights for CPH model
 
-    signature <- signature_yaml_setup(signature_name)
+    signature <- loadSignatureYAML(signature_name)
 
     # Convert model weights to list and set up names
     model_feature_list <- as.list(model_feature_weights)
@@ -119,9 +119,18 @@ saveSignature <- function(signature_name, model_feature_weights, output_dir){ #n
     close(output_file)
 }
 
-
-signatureYAMLSetup <- function(signature_name) { #nolint 
-    signature_config <- read_yaml(paste("workflow/signatures/", signature_name, ".yaml", sep = ""))
+#' Function to read in a signature file and get the feature names and weights
+#' 
+#' @param signature_name Name of the signature to read in, should have a signature.yaml file in the signatures folder. Weights are optional in the file.
+#' 
+#' @return list of feature names and weights
+loadSignatureYAML <- function(signature_name) { #nolint 
+    # Paste together the path to the signature file
+    signature_file_path <- paste("workflow/signatures/", signature_name, ".yaml", sep = "")
+    # Confirm it is a yaml file
+    checkmate::assert_file(signature_file_path, access = "r", extension = "yaml")
+    # Load the signature file
+    signature_config <- read_yaml(signature_file_path)
     # Names of the features in the signature
     sig_feature_names <- names(signature_config$signature)
     # Weights for the features in the signature
@@ -156,7 +165,7 @@ createSignature <- function(dataset_config_file_path, signature_name, output_dir
     }
 
     # Signature setup - get the signature features and weights
-    signature <- signature_yaml_setup(signature_name)
+    signature <- loadSignatureYAML(signature_name)
     sig_feature_names <- signature$names
     sig_weights <- signature$weights
 
@@ -211,7 +220,7 @@ applySignature <- function(dataset_config_file_path, signature_name) { #nolint
     dataset_name <- dataset_config$dataset_name
 
     # Signature setup - get the signature features and weights
-    signature <- signatureYAMLSetup(signature_name)
+    signature <- loadSignatureYAML(signature_name)
     sig_feature_names <- signature$names
     sig_weights <- signature$weights
 
