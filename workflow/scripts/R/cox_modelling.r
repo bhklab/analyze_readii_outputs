@@ -47,26 +47,50 @@ loadDataFile <- function(data_file_path) { #nolint
     return(loaded_dataframe)
 }
 
+#' Function to train a CoxPH model to make a signature based on a set of features.
+#' Will return the trained weights for the model.
+#' 
+#' @param train_labelled_features_file_path Path to the file containing the training features with outcome labels included.
+#' @param surv_time_label Label for the time column in the training features file.
+#' @param surv_event_label Label for the event column in the training features file.
+#' @param model_feature_list List of feature names to use for the Cox model.
+#' 
+#' @return vector of trained weights.
+trainCoxModel <- function(train_labelled_features_file_path,
+                          surv_time_label,
+                          surv_event_label,
+                          model_feature_list){ #nolint
 
-trainCoxModel <- function(csv_training_features,
-                            surv_time_label,
-                            surv_event_label,
-                            model_feature_list){ #nolint
+    # Load the feature data as a dataframe
+    labelled_feature_data <- loadDataFile(train_labelled_features_file_path)
 
-    train_radiomics_data <- load_data_file(csv_training_features)
+     # Get just features selected for the model
+    train_feature_data <- tryCatch({
+        labelled_feature_data[, model_feature_list]
+    }, error = function(e) {
+        stop(paste("Model features not found in provided feature set:", model_feature_list))
+    })
 
-    time_data <- train_radiomics_data[, surv_time_label]
-    event_data <- train_radiomics_data[, surv_event_label]
+    # Get the time and event label columns from the feature data
+    time_label <- tryCatch({
+        labelled_feature_data[, surv_time_label]
+    }, error = function(e) {
+        stop(paste("Time column not found in provided feature set:", surv_time_label))
+    })
+    event_label <- tryCatch ({
+        labelled_feature_data[, surv_event_label] 
+    }, error = function(e) {
+    stop(paste("Event column not found in provided feature set:", surv_event_label))
+    })
 
-    train_model_features <- as.data.frame(train_radiomics_data[, model_feature_list])
-
-    model_fit <- coxph(Surv(time_data, event_data) ~ .,
+    # Fit a CoxPH model to the training features
+    model_fit <- coxph(Surv(time_label, event_label) ~ .,
                        x = TRUE,
                        y = TRUE,
                        method = "breslow",
-                       data = train_model_features)
+                       data = train_features_data)
 
-    # Get weights from model and return those two
+    # Get weights from model and return them
     return(model_fit$coefficients)
 }
 
