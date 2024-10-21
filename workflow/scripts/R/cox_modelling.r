@@ -70,6 +70,7 @@ trainCoxModel <- function(csv_training_features,
     return(model_fit$coefficients)
 }
 
+#' 
 testCoxModel <- function(csv_testing_features,
                            surv_time_label,
                            surv_event_label,
@@ -211,10 +212,10 @@ createSignature <- function(dataset_config_file_path, signature_name, output_dir
                                      modelFeatureList = sig_feature_names)
 
     # Save out the model weights for the signature as a yaml file
-    saveSignature(signature_name = signature_name,
-                  model_feature_weights = trained_weights,
-                  output_dir = output_dir,
-                  overwrite_signature = overwrite_signature)
+    saveSignatureYAML(signature_name = signature_name,
+                      model_feature_weights = trained_weights,
+                      output_dir = output_dir,
+                      overwrite_signature = overwrite_signature)
 
     # Apply the signature to the test set if specified
     if (test_signature == TRUE) {
