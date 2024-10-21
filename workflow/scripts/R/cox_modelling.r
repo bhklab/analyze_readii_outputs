@@ -70,27 +70,51 @@ trainCoxModel <- function(csv_training_features,
     return(model_fit$coefficients)
 }
 
+#' Function to test a CPH model with weights on a set of features.
 #' 
-testCoxModel <- function(csv_testing_features,
-                           surv_time_label,
-                           surv_event_label,
-                           model_feature_list,
-                           model_feature_weights){ #nolint
+#' @param test_labelled_features_file_path Path to the file containing the test features with outcome labels included.
+#' @param surv_time_label Label for the time column in the test features file.
+#' @param surv_event_label Label for the event column in the test features file.
+#' @param model_feature_list List of feature names to use for the Cox model.
+#' @param model_feature_weights Vector of weights for the Cox model
+#' 
+#' @return vector of test results.
+testCoxModel <- function(test_labelled_features_file_path,
+                         surv_time_label,
+                         surv_event_label,
+                         model_feature_list,
+                         model_feature_weights){ #nolint
 
-    test_radiomics_data <- load_data_file(csv_testing_features)
+    # Load the feature data as a dataframe
+    labelled_feature_data <- loadDataFile(test_features_file_path)
+    
+    # Get only features selected for the model
+    test_feature_data <- tryCatch({
+        labelled_feature_data[, model_feature_list]
+    }, error = function(e) {
+        stop(paste("Model features not found in provided feature set:", model_feature_list))
+    })
 
-    # INSERT CHECK FOR RADIOMIC COLUMNS AND MODELFEATURELIST
+    # Convert the features dataframe to a matrix
+    test_feature_matrix <- data.matrix(test_feature_data)
 
-    test_radiomic_features <- test_radiomics_data[, model_feature_list]
+    # Multiply the feature matrix by the weights - this is applying the Cox model to the test set
+    feature_hazards <- test_feature_matrix %*% model_feature_weights
 
-    test_rad_matrix <- data.matrix(test_radiomic_features)
+    # Get the time and event label columns from the feature data
+    time_label <- tryCatch({
+        labelled_feature_data_data[, surv_time_label]
+    }, error = function(e) {
+        stop(paste("Time column not found in provided feature set:", surv_time_label))
+    })
+    event_label <- tryCatch ({
+        labelled_feature_data[, surv_event_label] 
+    }, error = function(e) {
+    stop(paste("Event column not found in provided feature set:", surv_event_label))
+    })
 
-    radiomic_hazards <- test_rad_matrix %*% model_feature_weights
-
-    time_label <- test_radiomics_data[, surv_time_label]
-    event_label <- test_radiomics_data[, surv_event_label]
-
-    performance_results <- concordance.index(x = radiomic_hazards,
+    # Calculate concordance index for the test set
+    performance_results <- concordance.index(x = feature_hazards,
                                              surv.time = time_label,
                                              surv.event = event_label,
                                              method = "noether",
