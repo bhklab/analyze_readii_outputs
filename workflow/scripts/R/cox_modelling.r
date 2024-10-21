@@ -127,7 +127,7 @@ testCoxModel <- function(test_labelled_features_file_path,
 
     # Get the time and event label columns from the feature data
     time_label <- tryCatch({
-        labelled_feature_data_data[, surv_time_label]
+        labelled_feature_data[, surv_time_label]
     }, error = function(e) {
         stop(paste("Time column not found in provided feature set:", surv_time_label))
     })
