@@ -2,11 +2,27 @@ import numpy as np
 import os
 import pandas as pd 
 import re
+import yaml
 
 from pandas import Series, DataFrame
 from collections.abc import Sequence, Mapping
 
 from typing import Optional, Union, Dict
+
+def loadImageDatasetConfig(dataset_name:str,
+                           config_dir_path:Optional[str]="../../config") -> dict:
+    # Make full path to config file
+    config_file_path = os.path.join(config_dir_path, f"{dataset_name}.yaml")
+
+    # Check if config file exists
+    if os.path.exists(config_file_path):
+        # Load the config file
+        config = yaml.safe_load(open(config_file_path, "r"))
+        return config
+    else:
+        print(f"Config file {config_file_path} does not exist.")
+        return None
+
 
 def loadFileToDataFrame(file_path:str) -> pd.DataFrame:
     """Load clinical data from a csv or xlsx file into a pandas dataframe.
@@ -36,6 +52,7 @@ def loadFileToDataFrame(file_path:str) -> pd.DataFrame:
         print(f"An error occurred: {e}")
         return None
     
+
 
 def loadFeatureFilesFromImageTypes(extracted_feature_dir:str,
                                     image_types:Optional[list]=['original'], 
@@ -70,7 +87,7 @@ def loadFeatureFilesFromImageTypes(extracted_feature_dir:str,
         try:
             # Extract the image type feature csv file from the feature directory
             # This should return a list of length 1, so we can just take the first element
-            image_type_feature_file = [file for file in feature_file_list if ("original" in file) and (file.endswith(".csv"))][0]
+            image_type_feature_file = [file for file in feature_file_list if (image_type in file) and (file.endswith(".csv"))][0]
             # Remove the image type file from the list of feature files
             feature_file_list.remove(image_type_feature_file)
         except Exception as e:
