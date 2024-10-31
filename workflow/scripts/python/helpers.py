@@ -5,6 +5,7 @@ import re
 import yaml
 
 from pandas import Series, DataFrame
+from seaborn import heatmap
 from collections.abc import Sequence, Mapping
 
 from typing import Optional, Union, Dict
@@ -369,3 +370,33 @@ def splitDataSetup(dfClinical:DataFrame,
             splitFeatureDataframes[value] = splitFeature
     
     return splitClinicalDataframes, splitFeatureDataframes
+
+
+def saveSNSPlot(sns_plot:heatmap,
+                plot_name:str,
+                output_dir_path:Optional[str]="../../results",
+                dataset_name:Optional[str]="",):
+    """Function to save out a seaborn plot to a png file.
+
+    Parameters
+    ----------
+    sns_plot : seaborn.heatmap
+        Seaborn plot to save out.
+    plot_name : str
+        What to name the plot on save. Ex. "RADCURE_original_vs_shuffled_correlation_plot.png"
+    output_dir_path : str, optional
+        Path to the directory to save the plot to. The default is "../../results".
+    dataset_name : str, optional
+        Name of the dataset to save the plot for. The default is "".
+    """
+    # Setup output path
+    output_path = os.path.join(output_dir_path, dataset_name, "plot_figures", plot_name)
+
+    # Make directory if it doesn't exist, but don't fail if it already exists
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    # Save out the plot
+    sns_plot.get_figure().savefig(output_path)
+    print(f"Saved out plot to {output_path}")
+
+    return
