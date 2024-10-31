@@ -372,10 +372,10 @@ def splitDataSetup(dfClinical:DataFrame,
     return splitClinicalDataframes, splitFeatureDataframes
 
 
-def saveSNSPlot(sns_plot:heatmap,
-                plot_name:str,
-                output_dir_path:Optional[str]="../../results",
-                dataset_name:Optional[str]="",):
+def savePlotFigure(sns_plot:heatmap,
+                   plot_name:str,
+                   output_dir_path:Optional[str]="",
+                   dataset_name:Optional[str]="",):
     """Function to save out a seaborn plot to a png file.
 
     Parameters
@@ -389,8 +389,13 @@ def saveSNSPlot(sns_plot:heatmap,
     dataset_name : str, optional
         Name of the dataset to save the plot for. The default is "".
     """
+
+    # Set default output directory path
+    if not output_dir_path:
+        output_dir_path = os.path.join("../../results", dataset_name, "plot_figures")
+
     # Setup output path
-    output_path = os.path.join(output_dir_path, dataset_name, "plot_figures", plot_name)
+    output_path = os.path.join(output_dir_path, plot_name)
 
     # Make directory if it doesn't exist, but don't fail if it already exists
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -400,3 +405,8 @@ def saveSNSPlot(sns_plot:heatmap,
     print(f"Saved out plot to {output_path}")
 
     return
+
+def plotAsDiagonal(dataframe_to_plot:DataFrame,
+                   triangle:Optional[str]="lower"):
+    
+    pass
