@@ -406,7 +406,3 @@ def savePlotFigure(sns_plot:heatmap,
 
     return
 
-def plotAsDiagonal(dataframe_to_plot:DataFrame,
-                   triangle:Optional[str]="lower"):
-    
-    pass
