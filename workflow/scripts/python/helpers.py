@@ -401,7 +401,7 @@ def savePlotFigure(sns_plot:heatmap,
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     # Save out the plot
-    sns_plot.get_figure().savefig(output_path)
+    sns_plot.get_figure().savefig(output_path, bbox_inches='tight')
     print(f"Saved out plot to {output_path}")
 
     return
