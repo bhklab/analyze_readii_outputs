@@ -98,7 +98,9 @@ def plotCorrelationHeatmap(correlation_matrix_df:pd.DataFrame,
     # Plot the correlation matrix
     corr_ax = sns.heatmap(correlation_matrix_df,
                          mask = mask,
-                         cmap=cmap)
+                         cmap=cmap,
+                         vmin=-1.0,
+                         vmax=1.0)
     
     # Remove the individual feature names from the axes
     corr_ax.set_xticklabels(labels=[])
@@ -108,7 +110,7 @@ def plotCorrelationHeatmap(correlation_matrix_df:pd.DataFrame,
     corr_ax.set_xlabel(xlabel)
     corr_ax.set_ylabel(ylabel)
     
-    plt.title(title, fontsize=14)
+    plt.title(title, fontsize=14, y = 1.13)
     plt.suptitle(subtitle, fontsize=12)
     
     return corr_fig
