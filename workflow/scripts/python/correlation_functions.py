@@ -3,6 +3,7 @@ from typing import Optional
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+from scipy.linalg import issymmetric
 
 from matplotlib.colors import Colormap
 
@@ -110,7 +111,40 @@ def plotCorrelationHeatmap(correlation_matrix_df:pd.DataFrame,
     corr_ax.set_xlabel(xlabel)
     corr_ax.set_ylabel(ylabel)
     
-    plt.title(title, fontsize=14, y = 1.13)
-    plt.suptitle(subtitle, fontsize=12)
+    plt.title(subtitle, fontsize=12)
+    plt.suptitle(title, fontsize=14)
     
     return corr_fig
+
+
+def plotCorrelationDistribution(correlation_matrix:pd.DataFrame,
+                                num_bins:Optional[int] = 100,
+                                xlabel:Optional[str] = "Correlations",
+                                ylabel:Optional[str] = "Frequency",
+                                y_lower_bound:Optional[int] = 0,
+                                y_upper_bound:Optional[int] = None,
+                                title:Optional[str] = "Distribution of Correlations for Features",
+                                subtitle:Optional[str] = "",
+                                ):
+    
+    # Convert to numpy to use histogram function
+    feature_correlation_arr = correlation_matrix.to_numpy()
+
+    # Check if matrix is symmetric
+    if issymmetric(feature_correlation_arr):
+        print("Correlation matrix is symmetric.")
+        # Get only the bottom left triangle of the correlation matrix since the matrix is symmetric 
+        lower_half_idx = np.mask_indices(feature_correlation_arr.shape[0], np.tril)
+        correlation_vals = feature_correlation_arr[lower_half_idx]
+    else:
+        correlation_vals = feature_correlation_arr
+
+    dist_fig, dist_ax = plt.subplots()
+    _, bin_edges, _ = dist_ax.hist(correlation_vals, bins=num_bins)
+    dist_ax.set_xlabel(xlabel)
+    dist_ax.set_ylabel(ylabel)
+    dist_ax.set_ybound(y_lower_bound, y_upper_bound)
+    plt.suptitle(title, fontsize=14)
+    plt.title(subtitle, fontsize=10)
+
+    return dist_fig
