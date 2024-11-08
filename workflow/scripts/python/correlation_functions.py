@@ -135,16 +135,18 @@ def plotCorrelationDistribution(correlation_matrix:pd.DataFrame,
         print("Correlation matrix is symmetric.")
         # Get only the bottom left triangle of the correlation matrix since the matrix is symmetric 
         lower_half_idx = np.mask_indices(feature_correlation_arr.shape[0], np.tril)
+        # This is a 1D array for binning and plotting
         correlation_vals = feature_correlation_arr[lower_half_idx]
     else:
-        correlation_vals = feature_correlation_arr
+        # Flatten the matrix to a 1D array for binning and plotting
+        correlation_vals = feature_correlation_arr.flatten()
 
     dist_fig, dist_ax = plt.subplots()
-    _, bin_edges, _ = dist_ax.hist(correlation_vals, bins=num_bins)
+    bin_values, bin_edges, _ = dist_ax.hist(correlation_vals, bins=num_bins)
     dist_ax.set_xlabel(xlabel)
     dist_ax.set_ylabel(ylabel)
     dist_ax.set_ybound(y_lower_bound, y_upper_bound)
     plt.suptitle(title, fontsize=14)
     plt.title(subtitle, fontsize=10)
 
-    return dist_fig
+    return dist_fig, bin_values, bin_edges
