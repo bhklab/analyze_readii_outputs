@@ -410,8 +410,8 @@ def savePlotFigure(sns_plot:heatmap,
 
 def makeProcessedDataFolders(dataset_name:str,
                              proc_data_path:str,
-                             data_sources:list,
-                             data_types:list,
+                             data_sources:Optional[list] = [""],
+                             data_types:Optional[list] = [""],
                              train_test_split:bool = False,
                              ):
     """ Function to make the processed data folders for a dataset.
