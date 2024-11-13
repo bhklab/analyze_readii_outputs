@@ -3,7 +3,14 @@ import os
 from pathlib import Path
 
 # from processing import 
-from readii_analysis.data.helpers import makeProcessedDataFolders, loadImageDatasetConfig, loadFileToDataFrame
+from readii_analysis.data.helpers import (
+    makeProcessedDataFolders, 
+    loadImageDatasetConfig, 
+    loadFileToDataFrame,
+    subsetDataframe
+)
+
+from readii_analysis.data.labelling import timeOutcomeColumnSetup
 
 ##### ARGUMENT INPUT #####
 parser = argparse.ArgumentParser(description="Run data setup for prediction models.")
@@ -33,7 +40,29 @@ makeProcessedDataFolders(dataset_name=DATASET_NAME,
 
 # Load clinical data
 clinical_data = loadFileToDataFrame(os.path.join(RAW_DATA_PATH, DATASET_NAME, "clinical", f"{DATASET_NAME}.csv"))
-print(f"Clinical data loaded with {len(clinical_data)} patients.")
+print(f"Clinical data loaded with {len(clinical_data)} patients.\n")
+
+# Clean clinical data
+exclusion_clinical_variables = config["exclusion_variables"]
+if exclusion_clinical_variables:
+    print("Will exclude clinical variables:", exclusion_clinical_variables)
+    # Drop rows with values in the exclusion variables
+    clinical_data = subsetDataframe(clinical_data, excludeDict=exclusion_clinical_variables)
+    print("Clinical data updated, now has", len(clinical_data), "patients.\n")
+else:
+    print("No exclusion variables found in config file.\n")
+
+
+# Outcome Variable setup
+clinical_data = timeOutcomeColumnSetup(clinical_data, 
+                                       outcome_column_label=config["outcome_variables"]["time_label"], 
+                                       standard_column_label="survival_time_in_years",
+                                       convert_to_years=config["outcome_variables"]["convert_to_years"])
+
+
+# event_column_label = config["outcome_variables"]["event_label"]
+
+
 
 
 
