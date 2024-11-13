@@ -2,8 +2,10 @@ import os
 from pandas import DataFrame
 import pandas as pd
 
-from .helpers import getPatientIdentifierLabel, getOnlyPyradiomicsFeatures, loadFileToDataFrame
+from readii_analysis.data.helpers import getPatientIdentifierLabel, getOnlyPyradiomicsFeatures, loadFileToDataFrame
 
+from typing import Optional, Union
+from pathlib import Path
 
 def setPatientIdAsIndex(dataframe_to_index:DataFrame,
                         patient_id_col:str = None):
@@ -190,3 +192,10 @@ def imageTypesFeatureProcessing(raw_data_dir:str,
         outcome_labelled_image_features.to_csv(os.path.join(feature_procdata_path, f"features/labelled_{feature_type}features_only_{image_type}_{dataset_name}.csv"))
         print(f"{image_type} {feature_type.capitalize()} feature data has been saved to {feature_procdata_path}.")
     
+
+
+def run_data_setup_for_prediction_models(dataset_name:str,
+                                         config_file:Union[str, Path],
+                                         ):
+    
+    pass
