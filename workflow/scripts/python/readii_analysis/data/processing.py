@@ -2,7 +2,7 @@ import os
 from pandas import DataFrame
 import pandas as pd
 
-from readii_analysis.data.helpers import getPatientIdentifierLabel, getOnlyPyradiomicsFeatures, loadFileToDataFrame
+from .helpers import getPatientIdentifierLabel, getOnlyPyradiomicsFeatures, loadFileToDataFrame
 
 from typing import Optional, Union
 from pathlib import Path
