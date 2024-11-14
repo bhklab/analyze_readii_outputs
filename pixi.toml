@@ -7,7 +7,7 @@ platforms = ["osx-arm64"]
 version = "0.1.0"
 
 [tasks]
-process = {cmd = "python -m readii_analysis.run_data_setup_for_prediction_models --dataset_name RADCURE --extraction_methods radiomics", cwd = "./workflow/scripts/python"}
+process = {cmd = "python -m readii_analysis.run_data_setup_for_prediction_models --dataset_name RADCURE --extraction_method radiomics --raw_feature_dir readii_outputs", cwd = "./workflow/scripts/python"}
 
 [dependencies]
 python = ">=3.12.6,<4"
