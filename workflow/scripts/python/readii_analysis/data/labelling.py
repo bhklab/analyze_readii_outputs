@@ -79,6 +79,11 @@ def timeOutcomeColumnSetup(dataframe_with_outcome:DataFrame,
     return dataframe_with_standardized_outcome
 
 
+def survivalStatusToNumericMapping():
+    pass
+
+
+
 def eventOutcomeColumnSetup(dataframe_with_outcome:DataFrame,
                             outcome_column_label:str,
                             standard_column_label:str,
@@ -127,17 +132,25 @@ def eventOutcomeColumnSetup(dataframe_with_outcome:DataFrame,
     elif np.issubdtype(event_variable_type, np.str_):
         print(f"{outcome_column_label} is string.")
 
-        # Check if user provided a dictionary handles all event values in the outcome column
-        if event_column_value_mapping and not all(value == map for value, map in zip(dataframe_with_outcome[outcome_column_label].str.lower().unique(), event_column_value_mapping.keys())):
-            raise ValueError(f"Not all event values in {outcome_column_label} are handled by the provided event_column_value_mapping dictionary.")
+        # Make values of outcome column lowercase
+        dataframe_with_standardized_outcome[outcome_column_label] = dataframe_with_outcome[outcome_column_label].str.lower()
         
-            # TODO: add handling for values not in the dictionary
+        # Get the existing event values in the provided dataframe and and sort them
+        existing_event_values = sorted(dataframe_with_standardized_outcome[outcome_column_label].unique())
+
+        # Handling for if user provides a dictionary
+        if event_column_value_mapping:
+            # Convert all dictionary keys to lowercase
+            event_column_value_mapping = dict((status.lower(), value) for status, value in event_column_value_mapping.items())
+        
+            # Check if user provided a dictionary handles all event values in the outcome column
+            if not all(value == map for value, map in zip(existing_event_values, sorted(event_column_value_mapping.keys()))):
+                raise ValueError(f"Not all event values in {outcome_column_label} are handled by the provided event_column_value_mapping dictionary.")
+        
+                # TODO: add handling for values not in the dictionary
 
         # Create event column value mapping if dictionary is not provided
         elif not event_column_value_mapping: 
-            # Get the existing event values in the provided dataframe and and sort them
-            existing_event_values = sorted(dataframe_with_outcome[outcome_column_label].str.lower().unique())
-
             # Set the conversion value for the first event value to 0
             other_event_num_value = 0
 
@@ -165,8 +178,9 @@ def eventOutcomeColumnSetup(dataframe_with_outcome:DataFrame,
         
         print(f"Converting values with mapping of: {event_column_value_mapping}.")
 
-        # get the existing event values, make them lowercase, replace the dictionary values with the dictionary keys, convert to numeric, and save to the standardized column copy
-        dataframe_with_standardized_outcome[standard_column_label] = dataframe_with_outcome[outcome_column_label].str.lower().replace(event_column_value_mapping).astype(int)
+        with pd.option_context('future.no_silent_downcasting', True):
+            # get the existing event values, make them lowercase, replace the dictionary values with the dictionary keys, convert to numeric, and save to the standardized column copy
+            dataframe_with_standardized_outcome[standard_column_label] = dataframe_with_standardized_outcome[outcome_column_label].replace(event_column_value_mapping).astype(int)
         
         return dataframe_with_standardized_outcome
     # end string handling                  
