@@ -7,6 +7,7 @@ outcome_variables:
     time_label: "Length FU"
     event_label: "Status"
     convert_to_years: False
+    event_value_mapping: {'Alive': 0, 'Dead': 1}
 
 exclusion_variables: {'Ds Site': ['Sarcoma', 'Unknown', 'Paraganglioma', 'Salivary Glands', 'Other', 'benign tumor', 'Orbit', 'Lacrimal gland', 'Skin']}
 
