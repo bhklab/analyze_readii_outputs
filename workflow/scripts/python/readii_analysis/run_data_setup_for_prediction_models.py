@@ -10,7 +10,10 @@ from readii_analysis.data.helpers import (
     subsetDataframe
 )
 
-from readii_analysis.data.labelling import timeOutcomeColumnSetup
+from readii_analysis.data.labelling import (
+    timeOutcomeColumnSetup,
+    eventOutcomeColumnSetup
+)
 
 ##### ARGUMENT INPUT #####
 parser = argparse.ArgumentParser(description="Run data setup for prediction models.")
@@ -59,8 +62,12 @@ clinical_data = timeOutcomeColumnSetup(clinical_data,
                                        standard_column_label="survival_time_in_years",
                                        convert_to_years=config["outcome_variables"]["convert_to_years"])
 
+clinical_data = eventOutcomeColumnSetup(clinical_data,
+                                        outcome_column_label=config["outcome_variables"]["event_label"],
+                                        standard_column_label="survival_event_binary",
+                                        event_column_value_mapping=config["outcome_variables"]["event_value_mapping"])
 
-# event_column_label = config["outcome_variables"]["event_label"]
+
 
 
 
