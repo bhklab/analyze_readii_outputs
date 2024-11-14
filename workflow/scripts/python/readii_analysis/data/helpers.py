@@ -8,7 +8,7 @@ import yaml
 from pandas import DataFrame
 from seaborn import heatmap
 
-from typing import Optional, Dict
+from typing import Optional, Dict, Union
 
 def loadImageDatasetConfig(dataset_name:str,
                            config_dir_path:Optional[str]="../../config") -> dict:
@@ -343,8 +343,8 @@ def savePlotFigure(sns_plot:heatmap,
 
 def makeProcessedDataFolders(dataset_name:str,
                              proc_data_path:str,
-                             data_sources:Optional[list] = [""],
-                             data_types:Optional[list] = [""],
+                             data_sources:Optional[Union[str, list]] = [""],
+                             data_types:Optional[Union[str,list]] = [""],
                              train_test_split:bool = False,
                              ):
     """ Function to make the processed data folders for a dataset.
@@ -362,6 +362,12 @@ def makeProcessedDataFolders(dataset_name:str,
     train_test_split : bool, optional
         Whether to make the train and test processed data folders. The default is False.
     """
+    # Set up data sources and data types as lists if they are not already
+    if type(data_sources) is str:
+        data_sources = [data_sources]
+    if type(data_types) is str:
+        data_types = [data_types]
+
     # Make clinical procdata folder
     path_to_proc_clinical = os.path.join(proc_data_path, dataset_name, 'clinical')
     if not os.path.exists(path_to_proc_clinical):
