@@ -15,15 +15,21 @@ from readii_analysis.data.labelling import (
     eventOutcomeColumnSetup
 )
 
+from readii_analysis.data.processing import (
+    imageTypesFeatureProcessing
+)
+
 ##### ARGUMENT INPUT #####
 parser = argparse.ArgumentParser(description="Run data setup for prediction models.")
 parser.add_argument("--dataset_name", type=str, help="Name of the dataset to run data setup for.")
-parser.add_argument("--extraction_methods", type=str, nargs="+", help="List of extraction methods to run data setup for.")
+parser.add_argument("--extraction_method", type=str, help="Extraction methods to run data setup for.")
+parser.add_argument("--raw_feature_dir", type=str, help="Path to the directory containing the raw feature files.")
 args = parser.parse_args()
 
 # Input arguments
 DATASET_NAME = args.dataset_name
-EXTRACTION_METHODS = args.extraction_methods
+EXTRACTION_METHOD = args.extraction_method
+RAW_FEATURE_DIR_NAME = args.raw_feature_dir
 
 # Set variables
 RAW_DATA_PATH = Path("../../../rawdata/")
@@ -34,13 +40,15 @@ CONFIG_DIR_PATH = Path("../../config/")
 # Load config file
 config = loadImageDatasetConfig(DATASET_NAME, CONFIG_DIR_PATH)
 
+#%% MAKE OUTPUT DIRECTORIES
 # Make output directories for this pipeline
 makeProcessedDataFolders(dataset_name=DATASET_NAME,
                          proc_data_path=PROC_DATA_PATH,
-                         data_sources=EXTRACTION_METHODS,
+                         data_sources=EXTRACTION_METHOD,
                          data_types=['clinical', 'features'],
                          train_test_split=config["train_test_split"]["split"])
 
+#%% CLINICAL DATA PROCESSING
 # Load clinical data
 clinical_data = loadFileToDataFrame(os.path.join(RAW_DATA_PATH, DATASET_NAME, "clinical", f"{DATASET_NAME}.csv"))
 print(f"Clinical data loaded with {len(clinical_data)} patients.\n")
@@ -62,10 +70,29 @@ clinical_data = timeOutcomeColumnSetup(clinical_data,
                                        standard_column_label="survival_time_in_years",
                                        convert_to_years=config["outcome_variables"]["convert_to_years"])
 
+# print(config["outcome_variables"]["event_value_mapping"])
+
+# print(clinical_data[config["outcome_variables"]["event_label"]].str.lower().unique())
 clinical_data = eventOutcomeColumnSetup(clinical_data,
                                         outcome_column_label=config["outcome_variables"]["event_label"],
                                         standard_column_label="survival_event_binary",
                                         event_column_value_mapping=config["outcome_variables"]["event_value_mapping"])
+
+# TODO: decide if setting patient ID as index here, or in intersection call 
+# TODO: save out clinical data at this point
+
+#%% IMAGE FEATURE PROCESSING
+# Construct path to the directory containing the raw image feature files
+feature_dir_path = os.path.join(RAW_DATA_PATH, DATASET_NAME, RAW_FEATURE_DIR_NAME)
+
+imageTypesFeatureProcessing(raw_data_dir=feature_dir_path,
+                            feature_type=EXTRACTION_METHOD,
+                            proc_data_path=PROC_DATA_PATH,
+                            clinical_data=clinical_data,
+                            dataset_name=DATASET_NAME,
+                            outcome_labels=["survival_time_in_years", "survival_event_binary"],
+                            train_test_split_settings=config['train_test_split'],
+                            )
 
 
 
