@@ -2,7 +2,7 @@ import os
 from pandas import DataFrame
 import pandas as pd
 
-from .helpers import getPatientIdentifierLabel, getOnlyPyradiomicsFeatures, loadFileToDataFrame
+from .helpers import getPatientIdentifierLabel, getOnlyPyradiomicsFeatures, loadFileToDataFrame, splitDataSetup
 
 from typing import Optional, Union
 from pathlib import Path
@@ -69,6 +69,7 @@ def getPatientIntersectionDataframes(dataframe_A:DataFrame,
     return intersection_index_dataframeA, intersection_index_dataframeB
 
 
+
 def addOutcomeLabels(feature_data_to_label:DataFrame,
                       clinical_data:DataFrame,
                       outcome_labels:list = ["survival_time_in_years", "survival_event_binary"]):
@@ -89,6 +90,93 @@ def addOutcomeLabels(feature_data_to_label:DataFrame,
     # Join the outcome label dataframe to the feature data dataframe
     outcome_labelled_feature_data = outcome_label_columns.join(feature_data_to_label)
     return outcome_labelled_feature_data
+
+
+
+def getImageTypesFromDirectory(raw_data_dir:str,
+                  feature_file_prefix:str = "",
+                  feature_file_suffix:str = ".csv"):
+    """ Function to get a list of image types from a directory containing image feature files.
+
+    Parameters
+    ----------
+    raw_data_dir : str
+        Path to the directory containing the image feature files.
+    feature_file_prefix : str, optional
+        Prefix to remove from the feature file name. The default is "".
+    feature_file_suffix : str, optional
+        Suffix to remove from the feature file name. The default is ".csv".
+    
+    Returns
+    -------
+    list
+        List of image types from the image feature files.
+    """
+
+    return sorted([file.removeprefix(feature_file_prefix).removesuffix(feature_file_suffix) for file in os.listdir(raw_data_dir)])
+
+
+
+def trainTestSplitSetup(clinical_data:DataFrame,
+                        feature_data:DataFrame,
+                        split_variable:str,
+                        proc_data_path:str,
+                        dataset_name:str,
+                        impute_value:Optional[str] = "",
+                        image_type:Optional[str] = ""
+                        ):
+    """ Function to split clinical and feature sets into training and test sets based on a label in the clinical data.
+
+    Parameters
+    ----------
+    clinical_data : DataFrame
+        Dataframe containing the clinical data to use for train test splits. Must include a column name matching split_variable. Index must match the index of the feature data.
+    feature_data : DataFrame
+        Dataframe containing the feature data to use for train test splits. Index must match the index of the clinical data.
+    split_variable : str
+        Name of the column to split on in the clinical data.
+    proc_data_path : str
+        Path to the processed data folder that all folders will be made under.
+    dataset_name : str
+        Name of the dataset to make the processed data folders for.
+
+    impute_value : str, optional
+        Value to impute for missing values in the split variable. The default is "".
+    image_type : str, optional
+        Name of the image type to use for the train test splits. The default is "".
+
+    Returns
+    -------
+    split_clinical : dict
+        Dictionary containing the clinical data for the training and test sets.
+    split_features : dict
+        Dictionary containing the feature data for the training and test sets.
+    """
+    # Set up train test output path
+    train_test_procdata_path = os.path.join(proc_data_path, "train_test_split")
+
+    # Split the data into training and test sets, imputing rows with missing values
+    split_clinical, split_features = splitDataSetup(clinical_data, feature_data, 
+                                                    splitVariables = split_variable, 
+                                                    imputeValue = impute_value)
+    
+    # Save out training and test clinical data
+    split_clinical['training'].to_csv(os.path.join(train_test_procdata_path, f"clinical/train_merged_clinical_{dataset_name}.csv"))
+    split_clinical['test'].to_csv(os.path.join(train_test_procdata_path, f"clinical/test_merged_clinical_{dataset_name}.csv"))
+
+    # Save out training and test radiomic feature data
+    # Add "_" to the image type if it is not blank
+    if image_type:
+        split_features['training'].to_csv(os.path.join(train_test_procdata_path, f"train_features/train_labelled_{image_type}_{dataset_name}.csv"))
+        split_features['test'].to_csv(os.path.join(train_test_procdata_path, f"test_features/test_labelled_{image_type}_{dataset_name}.csv"))
+    else:
+        split_features['training'].to_csv(os.path.join(train_test_procdata_path, f"train_features/train_labelled_features_{dataset_name}.csv"))
+        split_features['test'].to_csv(os.path.join(train_test_procdata_path, f"test_features/test_labelled_features_{dataset_name}.csv"))
+    
+    print(f"Training and test splits saved to {train_test_procdata_path}")
+
+    return split_clinical, split_features
+
 
 
 def featureProcessingForPrediction(raw_image_data:DataFrame,
@@ -124,10 +212,11 @@ def featureProcessingForPrediction(raw_image_data:DataFrame,
 
     # Filter the clinical and image features to only include patients with imaging and clinical data based on image features index
     # e.g. patients with only clinical data will not be included
+    # Index of returned dataframes will be the patient IDs 
     common_image_data, common_clinical_data = getPatientIntersectionDataframes(image_data, clinical_data, need_pat_index_A=True, need_pat_index_B=True)
 
-    print(f"Patients with both clinical and radiomic features: {len(common_clinical_data)}")
-    print(f"Number of segmentations with radiomic features: {len(common_image_data)}")
+    print(f"Common patient count: {len(common_clinical_data)}")
+    print(f"Number of segmentations: {len(common_image_data)}")
 
     # Get just the radiomic feature columns from the dataframe, remove any metadata/diagnostics columns
     image_features = getOnlyPyradiomicsFeatures(common_image_data)
@@ -140,36 +229,39 @@ def featureProcessingForPrediction(raw_image_data:DataFrame,
 
 
 
-def getImageTypesFromDirectory(raw_data_dir:str,
-                  feature_file_prefix:str = "",
-                  feature_file_suffix:str = ".csv"):
-    """ Function to get a list of image types from a directory containing image feature files.
+def imageTypesFeatureProcessing(raw_data_dir:str,
+                       feature_type:str, # radiomic or deep_learning
+                       proc_data_path:str,
+                       clinical_data:DataFrame,
+                       dataset_name:str,
+                       outcome_labels:Optional[list] = ["survival_time_in_years", "survival_event_binary"],
+                       train_test_split_settings:Optional[dict] = {"split": False, "split_variable": {}, "impute": ""},
+                       ):
+    """ Function to process a set of image features for prediction.
 
     Parameters
     ----------
     raw_data_dir : str
-        Path to the directory containing the image feature files.
-    feature_file_prefix : str, optional
-        Prefix to remove from the feature file name. The default is "".
-    feature_file_suffix : str, optional
-        Suffix to remove from the feature file name. The default is ".csv".
-    
+        Path to the directory containing the raw image feature files.
+    feature_type : str
+        Type of image feature to process. Something like "radiomic" or "deep_learning".
+        The string will be used to construct the file names of the processed data.
+    proc_data_path : str
+        Path to the processed data folder that all folders will be made under.
+    clinical_data : DataFrame
+        Dataframe containing the clinical data to use for survival labels.
+    dataset_name : str
+        Name of the dataset to process.
+    outcome_labels : list, optional
+        List of outcome labels to extract from the clinical dataframe. The default is ["survival_time_in_years", "survival_event_binary"].
+    train_test_split_settings : dict, optional
+        Dictionary containing settings for training and test splits. The default is {"split": False, "split_variable": {}, "impute": ""}.
+
     Returns
     -------
-    list
-        List of image types from the image feature files.
+    None
+
     """
-
-    return sorted([file.removeprefix(feature_file_prefix).removesuffix(feature_file_suffix) for file in os.listdir(raw_data_dir)])
-
-
-
-def imageTypesFeatureProcessing(raw_data_dir:str,
-                       feature_type:str, # radiomic or fmcib
-                       proc_data_path:str,
-                       clinical_data:DataFrame,
-                       dataset_name:str,
-                       outcome_labels:list = ["survival_time_in_years", "survival_event_binary"]):
     
     image_feature_file_list = os.listdir(raw_data_dir)
 
@@ -184,14 +276,32 @@ def imageTypesFeatureProcessing(raw_data_dir:str,
         feature_data = loadFileToDataFrame(os.path.join(raw_data_dir, feature_file))
     
         common_clinical_data, common_image_data, outcome_labelled_image_features = featureProcessingForPrediction(feature_data, clinical_data, outcome_labels)
-        print(f"{image_type} {feature_type.capitalize()} feature data has been intersected with clinical data and labelled with outcome labels.")
+        print(f"{image_type} {feature_type} feature data has been intersected with clinical data and labelled with outcome labels.")
 
         # Save processed data
         common_clinical_data.to_csv(os.path.join(feature_procdata_path, f"clinical/merged_clinical_{dataset_name}.csv"))
         common_image_data.to_csv(os.path.join(feature_procdata_path, f"features/merged_{feature_type}features_{image_type}_{dataset_name}.csv"))
         outcome_labelled_image_features.to_csv(os.path.join(feature_procdata_path, f"features/labelled_{feature_type}features_only_{image_type}_{dataset_name}.csv"))
-        print(f"{image_type} {feature_type.capitalize()} feature data has been saved to {feature_procdata_path}.")
+        print(f"{image_type} {feature_type} feature data has been saved to {feature_procdata_path}/features")
     
+        if train_test_split_settings:
+            print("Splitting data into training and test sets.")
+            
+            # Split the clinical and labelled image features into training and test sets
+            _, _ = trainTestSplitSetup(clinical_data = common_clinical_data,
+                                feature_data = outcome_labelled_image_features,
+                                split_variable = train_test_split_settings["split_variable"],
+                                proc_data_path = feature_procdata_path,
+                                dataset_name = dataset_name,
+                                impute_value = train_test_split_settings["impute"],
+                                image_type = image_type
+                                )
+        # end train test split
+
+        print("------------------------------------------------------------")
+        print()
+    # end image type loop
+    return
 
 
 def run_data_setup_for_prediction_models(dataset_name:str,
