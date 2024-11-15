@@ -78,6 +78,9 @@ clinical_data = eventOutcomeColumnSetup(clinical_data,
                                         standard_column_label="survival_event_binary",
                                         event_column_value_mapping=config["outcome_variables"]["event_value_mapping"])
 
+# save out cleaned clinical data
+clinical_data.to_csv(os.path.join(PROC_DATA_PATH, DATASET_NAME, "clinical", f"cleaned_clinical_{DATASET_NAME}.csv"))
+
 # TODO: decide if setting patient ID as index here, or in intersection call 
 # TODO: save out clinical data at this point
 
