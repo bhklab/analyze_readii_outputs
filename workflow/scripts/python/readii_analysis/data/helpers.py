@@ -215,28 +215,29 @@ def getOnlyPyradiomicsFeatures(dfPyradiomicsFeatures:DataFrame):
     diagnosticRadiomics = dfPyradiomicsFeatures.filter(regex=r"diagnostics_*")
 
     if not diagnosticRadiomics.empty:
-        # Get the last diagnostics column index - the features begin in the next column
-        lastDiagnosticIdx = dfPyradiomicsFeatures.columns.get_loc(diagnosticRadiomics.columns[-1])
+        # Get the last diagnostics column name - the features begin in the next column
+        lastDiagnosticColumn = diagnosticRadiomics.columns[-1]
         # Drop all the columns before the features start
-        featsOnlyRadiomics = dfPyradiomicsFeatures.iloc[:, lastDiagnosticIdx+1:]
+        featsOnlyRadiomics = dropUpToFeature(dfPyradiomicsFeatures, lastDiagnosticColumn, keep_feature_name_column=False)
 
     else:
         originalRadiomics = dfPyradiomicsFeatures.filter(regex=r'^original_*')
         if not originalRadiomics.empty:
-            # Get the first original feature column index - the features begin in this column
-            firstOriginalIdx = dfPyradiomicsFeatures.columns.get_loc(originalRadiomics.columns[0])
+            # Get the first original feature column name - the features begin in this column
+            firstOriginalFeature = originalRadiomics.columns[0]
             # Drop all the columns before the features start
-            featsOnlyRadiomics = dfPyradiomicsFeatures.iloc[:, firstOriginalIdx:]
+            featsOnlyRadiomics = dropUpToFeature(dfPyradiomicsFeatures, firstOriginalFeature, keep_feature_name=True)
         else:
-            raise ValueError("PyRadiomics file doesn't contain any diagnostics or original feature columns, so can't find beginning of features.")
+            raise ValueError("PyRadiomics file doesn't contain any diagnostics or original feature columns, so can't find beginning of features. Use dropUpToFeature and specify the last non-feature or first PyRadiomic feature column name to get only PyRadiomics features.")
 
     return featsOnlyRadiomics
 
 
 def dropUpToFeature(dataframe:DataFrame,
-                    feature_name:str
+                    feature_name:str,
+                    keep_feature_name_column:Optional[bool] = False
                     ):
-    """ Function to drop all columns up to and including the specified feature.
+    """ Function to drop all columns up to and possibly including the specified feature.
 
     Parameters
     ----------
@@ -244,18 +245,34 @@ def dropUpToFeature(dataframe:DataFrame,
         Dataframe to drop columns from.
     feature_name : str
         Name of the feature to drop up to.
-
+    keep_feature_name_column : bool, optional
+        Whether to keep the specified feature name column in the dataframe or drop it. The default is False.
+        
     Returns
     -------
     dataframe : DataFrame
         Dataframe with all columns up to and including the specified feature dropped.
     """
-    # Get the column names up to and including the specified feature
-    column_names = dataframe.columns.to_list()[:dataframe.columns.get_loc(feature_name)+1]
-    # Drop all columns up to and including the specified feature
-    dataframe_dropped_columns = dataframe.drop(columns=column_names)
+    try:
+        if keep_feature_name_column:
+            # Get the column names up to but not including the specified feature
+            column_names = dataframe.columns.to_list()[:dataframe.columns.get_loc(feature_name)]
+        else:
+            # Get the column names up to and including the specified feature
+            column_names = dataframe.columns.to_list()[:dataframe.columns.get_loc(feature_name)+1]
 
-    return dataframe_dropped_columns
+        # Drop all columns up to and including the specified feature
+        dataframe_dropped_columns = dataframe.drop(columns=column_names)
+
+        return dataframe_dropped_columns
+    
+    except KeyError:
+        print(f"Feature {feature_name} was not found as a column in dataframe. No columns dropped.")
+        return dataframe
+    
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
 
 
 def splitDataSetup(dfClinical:DataFrame,
