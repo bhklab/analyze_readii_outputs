@@ -2,11 +2,15 @@
 .pixi
 *.egg-info
 
+# Data folders
 rawdata
 procdata
 results
+archive
 
-
+# VS Code
 .vscode
 
+# Python
 *cpython*
+
