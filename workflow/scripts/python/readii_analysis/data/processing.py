@@ -127,7 +127,7 @@ def trainTestSplitSetup(clinical_data:DataFrame,
                         ):
     """ Function to split clinical and feature sets into training and test sets based on a label in the clinical data.
         The clinical and feature data will be saved out to the processed data folder.
-        
+
     Parameters
     ----------
     clinical_data : DataFrame
@@ -299,16 +299,19 @@ def imageTypesFeatureProcessing(raw_data_dir:str,
     
         if train_test_split_settings:
             print("Splitting data into training and test sets.")
+
+            clinical_out_file_suffix = f"merged_clinical_{dataset_name}.csv"
+            feature_out_file_suffix = f"labelled_{feature_type}features_only_{image_type}_{dataset_name}.csv"
             
             # Split the clinical and labelled image features into training and test sets
             _, _ = trainTestSplitSetup(clinical_data = common_clinical_data,
-                                feature_data = outcome_labelled_image_features,
-                                split_variable = train_test_split_settings["split_variable"],
-                                proc_data_path = feature_procdata_path,
-                                dataset_name = dataset_name,
-                                impute_value = train_test_split_settings["impute"],
-                                image_type = image_type
-                                )
+                                       feature_data = outcome_labelled_image_features,
+                                       split_variable = train_test_split_settings["split_variable"],
+                                       proc_data_path = feature_procdata_path,
+                                       impute_value = train_test_split_settings["impute"],
+                                       clinical_out_file_suffix=clinical_out_file_suffix,
+                                       feature_out_file_suffix=feature_out_file_suffix
+                                       )
         # end train test split
 
         print("------------------------------------------------------------")
