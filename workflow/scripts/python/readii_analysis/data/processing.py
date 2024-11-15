@@ -2,7 +2,7 @@ import os
 from pandas import DataFrame
 import pandas as pd
 
-from .helpers import getPatientIdentifierLabel, getOnlyPyradiomicsFeatures, loadFileToDataFrame, splitDataSetup
+from .helpers import getPatientIdentifierLabel, getOnlyPyradiomicsFeatures, loadFileToDataFrame, splitDataSetup, dropUpToFeature
 
 from typing import Optional, Union
 from pathlib import Path
@@ -183,16 +183,17 @@ def trainTestSplitSetup(clinical_data:DataFrame,
     split_features['training'].to_csv(os.path.join(train_test_procdata_path, f"train_features/train_{feature_out_file_suffix}"))
     split_features['test'].to_csv(os.path.join(train_test_procdata_path, f"test_features/test_{feature_out_file_suffix}"))
 
-    print(f"Training and test splits saved to {train_test_procdata_path}")
+    print(f"Training (n={len(split_clinical['training'])}) and test (n={len(split_clinical['test'])}) splits saved to {train_test_procdata_path}")
 
     return split_clinical, split_features
 
 
 
 def featureProcessingForPrediction(raw_image_data:DataFrame,
-                                 clinical_data:DataFrame,
-                                 outcome_labels:list = ["survival_time_in_years", "survival_event_binary"],
-                                            ):
+                                   clinical_data:DataFrame,
+                                   feature_type:str,
+                                   outcome_labels:list = ["survival_time_in_years", "survival_event_binary"],
+                                   ):
     """ Function to process a set of image features for prediction. Will return the intersected clinical and image data, and the image features with outcome labels added.
 
     Parameters
@@ -201,6 +202,8 @@ def featureProcessingForPrediction(raw_image_data:DataFrame,
         Dataframe containing the raw image features to process.
     clinical_data : DataFrame
         Dataframe containing the clinical data to use for survival labels.
+    feature_type : str
+        Type of image feature to process. Currently handles "radiomic" or "deep_learning".
     outcome_labels : list, optional
         List of outcome labels to extract from the clinical dataframe. The default is ["survival_time_in_years", "survival_event_binary"].
 
@@ -213,7 +216,9 @@ def featureProcessingForPrediction(raw_image_data:DataFrame,
     outcome_labelled_image_features : DataFrame
         Dataframe containing the image features from the intersected clinical and image data with outcome labels added.
     """
-    
+    if feature_type not in ["radiomic", "deep_learning"]:
+        raise ValueError(f"Feature type {feature_type} not supported. Must be either 'radiomic' or 'deep_learning'.")
+
     # Get patient ID column name
     patient_identifier = getPatientIdentifierLabel(raw_image_data)
 
@@ -231,9 +236,18 @@ def featureProcessingForPrediction(raw_image_data:DataFrame,
     print(f"Common patient count: {len(common_clinical_data)}")
     print(f"Number of segmentations: {len(common_image_data)}")
 
-    # Get just the radiomic feature columns from the dataframe, remove any metadata/diagnostics columns
-    image_features = getOnlyPyradiomicsFeatures(common_image_data)
-    print(f"Number of radiomic features: {(image_features.shape[1])}")
+    if feature_type == "radiomic":
+        # Get just the radiomic feature columns from the dataframe, remove any metadata/diagnostics columns
+        image_features = getOnlyPyradiomicsFeatures(common_image_data)
+        
+    elif feature_type == "deep_learning":
+        # Get just the deep learning feature columns from the dataframe, remove any metadata/diagnostics columns
+        image_features = dropUpToFeature(common_image_data, "negative_control")
+        # TODO: change this to a function that recognizes the metadata columns we specifically add from READII
+    else:
+        raise ValueError(f"Feature type {feature_type} not supported. Must be either 'radiomic' or 'deep_learning'.")
+
+    print(f"Number of features: {(image_features.shape[1])}")
 
     # Add survival labels to the image features
     outcome_labelled_image_features = addOutcomeLabels(image_features, common_clinical_data, outcome_labels)
@@ -288,7 +302,7 @@ def imageTypesFeatureProcessing(raw_data_dir:str,
         # Load the feature data
         feature_data = loadFileToDataFrame(os.path.join(raw_data_dir, feature_file))
     
-        common_clinical_data, common_image_data, outcome_labelled_image_features = featureProcessingForPrediction(feature_data, clinical_data, outcome_labels)
+        common_clinical_data, common_image_data, outcome_labelled_image_features = featureProcessingForPrediction(feature_data, clinical_data, feature_type, outcome_labels)
         print(f"{image_type} {feature_type} feature data has been intersected with clinical data and labelled with outcome labels.")
 
         # Save processed data
