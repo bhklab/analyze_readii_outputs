@@ -294,10 +294,13 @@ def imageTypesFeatureProcessing(raw_data_dir:str,
 
     feature_procdata_path = os.path.join(proc_data_path, dataset_name, feature_type)
 
+    image_types_found = []
+
     for feature_file in image_feature_file_list:
         # Get the image type from the feature file name
         image_type = feature_file.removeprefix(f"{feature_type}features_").removesuffix(f"_{dataset_name}.csv")
         print(f"Processing {feature_type} features for {image_type}")
+        image_types_found.append(image_type)
         
         # Load the feature data
         feature_data = loadFileToDataFrame(os.path.join(raw_data_dir, feature_file))
@@ -307,8 +310,8 @@ def imageTypesFeatureProcessing(raw_data_dir:str,
 
         # Save processed data
         common_clinical_data.to_csv(os.path.join(feature_procdata_path, f"clinical/merged_clinical_{dataset_name}.csv"))
-        common_image_data.to_csv(os.path.join(feature_procdata_path, f"features/merged_{feature_type}features_{image_type}_{dataset_name}.csv"))
-        outcome_labelled_image_features.to_csv(os.path.join(feature_procdata_path, f"features/labelled_{feature_type}features_only_{image_type}_{dataset_name}.csv"))
+        common_image_data.to_csv(os.path.join(feature_procdata_path, "features/features_with_metadata", f"merged_{feature_type}features_{image_type}_{dataset_name}.csv"))
+        outcome_labelled_image_features.to_csv(os.path.join(feature_procdata_path, "features/labelled_features_only", f"labelled_{feature_type}features_only_{image_type}_{dataset_name}.csv"))
         print(f"{image_type} {feature_type} feature data has been saved to {feature_procdata_path}/features")
     
         if train_test_split_settings['split']:
@@ -331,11 +334,4 @@ def imageTypesFeatureProcessing(raw_data_dir:str,
         print("------------------------------------------------------------")
         print()
     # end image type loop
-    return
-
-
-def run_data_setup_for_prediction_models(dataset_name:str,
-                                         config_file:Union[str, Path],
-                                         ):
-    
-    pass
+    return image_types_found
