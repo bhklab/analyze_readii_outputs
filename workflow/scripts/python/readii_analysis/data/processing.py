@@ -276,7 +276,7 @@ def imageTypesFeatureProcessing(raw_data_dir:str,
 
     """
     
-    image_feature_file_list = os.listdir(raw_data_dir)
+    image_feature_file_list = sorted(os.listdir(raw_data_dir))
 
     feature_procdata_path = os.path.join(proc_data_path, dataset_name, feature_type)
 
