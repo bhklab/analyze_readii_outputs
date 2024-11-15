@@ -121,12 +121,13 @@ def trainTestSplitSetup(clinical_data:DataFrame,
                         feature_data:DataFrame,
                         split_variable:str,
                         proc_data_path:str,
-                        dataset_name:str,
                         impute_value:Optional[str] = "",
-                        image_type:Optional[str] = ""
+                        clinical_out_file_suffix:Optional[str] = "",
+                        feature_out_file_suffix:Optional[str] = "",
                         ):
     """ Function to split clinical and feature sets into training and test sets based on a label in the clinical data.
-
+        The clinical and feature data will be saved out to the processed data folder.
+        
     Parameters
     ----------
     clinical_data : DataFrame
@@ -137,13 +138,12 @@ def trainTestSplitSetup(clinical_data:DataFrame,
         Name of the column to split on in the clinical data.
     proc_data_path : str
         Path to the processed data folder that all folders will be made under.
-    dataset_name : str
-        Name of the dataset to make the processed data folders for.
-
     impute_value : str, optional
         Value to impute for missing values in the split variable. The default is "".
-    image_type : str, optional
-        Name of the image type to use for the train test splits. The default is "".
+    clinical_out_file_suffix : str, optional
+        Suffix to add to the clinical output file name. The default will be clinical.csv.
+    feature_out_file_suffix : str, optional
+        Suffix to add to the feature output file name. The default will be features.csv.
 
     Returns
     -------
@@ -152,6 +152,21 @@ def trainTestSplitSetup(clinical_data:DataFrame,
     split_features : dict
         Dictionary containing the feature data for the training and test sets.
     """
+    # Handle feature and clinical output file names
+    if not clinical_out_file_suffix:
+        clinical_out_file_suffix = "clinical.csv"
+    # Check that clinical_out_file_suffix ends in ".csv" and add if it doesn't
+    if not clinical_out_file_suffix.endswith(".csv"):
+        clinical_out_file_suffix += ".csv"
+
+    # Check that feature_out_file_suffix is not blank
+    if not feature_out_file_suffix:
+        feature_out_file_suffix = "features.csv"
+    # Check that feature_out_file_suffix ends in ".csv" and add if it doesn't
+    if not feature_out_file_suffix.endswith(".csv"):
+        feature_out_file_suffix += ".csv"
+
+
     # Set up train test output path
     train_test_procdata_path = os.path.join(proc_data_path, "train_test_split")
 
@@ -161,18 +176,13 @@ def trainTestSplitSetup(clinical_data:DataFrame,
                                                     imputeValue = impute_value)
     
     # Save out training and test clinical data
-    split_clinical['training'].to_csv(os.path.join(train_test_procdata_path, f"clinical/train_merged_clinical_{dataset_name}.csv"))
-    split_clinical['test'].to_csv(os.path.join(train_test_procdata_path, f"clinical/test_merged_clinical_{dataset_name}.csv"))
+    split_clinical['training'].to_csv(os.path.join(train_test_procdata_path, f"clinical/train_{clinical_out_file_suffix}"))
+    split_clinical['test'].to_csv(os.path.join(train_test_procdata_path, f"clinical/test_{clinical_out_file_suffix}"))
 
     # Save out training and test radiomic feature data
-    # Add "_" to the image type if it is not blank
-    if image_type:
-        split_features['training'].to_csv(os.path.join(train_test_procdata_path, f"train_features/train_labelled_{image_type}_{dataset_name}.csv"))
-        split_features['test'].to_csv(os.path.join(train_test_procdata_path, f"test_features/test_labelled_{image_type}_{dataset_name}.csv"))
-    else:
-        split_features['training'].to_csv(os.path.join(train_test_procdata_path, f"train_features/train_labelled_features_{dataset_name}.csv"))
-        split_features['test'].to_csv(os.path.join(train_test_procdata_path, f"test_features/test_labelled_features_{dataset_name}.csv"))
-    
+    split_features['training'].to_csv(os.path.join(train_test_procdata_path, f"train_features/train_{feature_out_file_suffix}"))
+    split_features['test'].to_csv(os.path.join(train_test_procdata_path, f"test_features/test_{feature_out_file_suffix}"))
+
     print(f"Training and test splits saved to {train_test_procdata_path}")
 
     return split_clinical, split_features
@@ -210,10 +220,13 @@ def featureProcessingForPrediction(raw_image_data:DataFrame,
     # Check for duplicated rows and remove the second copy
     image_data = raw_image_data.drop_duplicates(subset=[patient_identifier, "series_UID","image_modality","seg_modality","seg_ref_image", "roi"])
 
+    # Set patient ID as index for image data
+    image_data.set_index(patient_identifier, inplace=True)
+
     # Filter the clinical and image features to only include patients with imaging and clinical data based on image features index
     # e.g. patients with only clinical data will not be included
     # Index of returned dataframes will be the patient IDs 
-    common_image_data, common_clinical_data = getPatientIntersectionDataframes(image_data, clinical_data, need_pat_index_A=True, need_pat_index_B=True)
+    common_image_data, common_clinical_data = getPatientIntersectionDataframes(image_data, clinical_data, need_pat_index_A=False, need_pat_index_B=True)
 
     print(f"Common patient count: {len(common_clinical_data)}")
     print(f"Number of segmentations: {len(common_image_data)}")
