@@ -18,7 +18,7 @@ from readii_analysis.analyze.correlation_functions import (
 
 
 def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_feature_dir:str):
-    print(f"Running correlation analysis for {DATASET_NAME} {EXTRACTION_METHOD} feature data.")
+    print(f"Running correlation analysis for {dataset_name} {extraction_method} feature data.")
 
     PROC_DATA_PATH = "../../../procdata/"
     RESULTS_DATA_PATH = f"../../../results/"
@@ -34,13 +34,19 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
                             data_types=["correlation_distribution_plots", "correlation_heatmap_plots"],
                             train_test_split=config["train_test_split"]["split"])
     
-
+    # Load in all processed feature sets - should have one file for each image type in the extracted_image_feature_dir
     extracted_image_feature_dir = os.path.join(PROC_DATA_PATH, dataset_name, extraction_method, extracted_feature_dir)
     image_feature_sets = loadFeatureFilesFromImageTypes(extracted_feature_dir = extracted_image_feature_dir,
                                                         image_types=config["image_types"],
                                                         drop_labels=True)
 
-    pass
+    print("Feature sets available for analysis:")
+    for feature_set in image_feature_sets.keys():
+        print("  ->", feature_set)
+
+    # Create all possible combinations of feature sets 
+    # orig vs. negative control gets you orig vs orig, neg vs neg, orig vs neg - do this x# of negative controls
+    # 
 
 
 
