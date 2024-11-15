@@ -328,7 +328,7 @@ def splitDataSetup(dfClinical:DataFrame,
         dfClinical[variable] = updatedSplitVariable
         print(f"Made copy of split variable with imputed columns: {variable}")
 
-        print("Getting split for ", variable)
+        print(f"Getting split for {variable}")
 
         for value in values:
             # Get the clinical subset for rows with value in the variable column
