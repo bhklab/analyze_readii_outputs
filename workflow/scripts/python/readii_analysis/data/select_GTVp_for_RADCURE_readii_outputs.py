@@ -19,6 +19,6 @@ def select_GTVp_for_RADCURE_readii_outputs(RADCURE_readii_output_dir:str):
 
 
 if __name__ == "__main__":
-    RADCURE_readii_output_dir = "rawdata/RADCURE/readii_outputs/"
+    RADCURE_readii_output_dir = "../../../rawdata/RADCURE/readii_outputs/"
 
     select_GTVp_for_RADCURE_readii_outputs(RADCURE_readii_output_dir)

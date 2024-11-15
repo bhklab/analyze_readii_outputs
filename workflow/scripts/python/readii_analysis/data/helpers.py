@@ -1,14 +1,14 @@
+import itertools
 import numpy as np 
 import os
 import pandas as pd 
 import re
 import yaml
 
-from pandas import Series, DataFrame
+from pandas import DataFrame
 from seaborn import heatmap
-from collections.abc import Sequence, Mapping
 
-from typing import Optional, Union, Dict
+from typing import Optional, Dict, Union
 
 def loadImageDatasetConfig(dataset_name:str,
                            config_dir_path:Optional[str]="../../config") -> dict:
@@ -162,9 +162,9 @@ def subsetDataframe(dataframe:pd.DataFrame,
     dataframeToSubset : pd.DataFrame
         Dataframe to subset.
     includeDict : dict
-        Dictionary of column names and values to include in the subset.
+        Dictionary of column names and values to include in the subset. ex. {"column_name": ["value1", "value2"]}
     excludeDict : dict
-        Dictionary of column names and values to exclude from the subset.
+        Dictionary of column names and values to exclude from the subset. ex. {"column_name": ["value1", "value2"]}
 
     Returns
     -------
@@ -215,90 +215,64 @@ def getOnlyPyradiomicsFeatures(dfPyradiomicsFeatures:DataFrame):
     diagnosticRadiomics = dfPyradiomicsFeatures.filter(regex=r"diagnostics_*")
 
     if not diagnosticRadiomics.empty:
-        # Get the last diagnostics column index - the features begin in the next column
-        lastDiagnosticIdx = dfPyradiomicsFeatures.columns.get_loc(diagnosticRadiomics.columns[-1])
+        # Get the last diagnostics column name - the features begin in the next column
+        lastDiagnosticColumn = diagnosticRadiomics.columns[-1]
         # Drop all the columns before the features start
-        featsOnlyRadiomics = dfPyradiomicsFeatures.iloc[:, lastDiagnosticIdx+1:]
+        featsOnlyRadiomics = dropUpToFeature(dfPyradiomicsFeatures, lastDiagnosticColumn, keep_feature_name_column=False)
 
     else:
         originalRadiomics = dfPyradiomicsFeatures.filter(regex=r'^original_*')
         if not originalRadiomics.empty:
-            # Get the first original feature column index - the features begin in this column
-            firstOriginalIdx = dfPyradiomicsFeatures.columns.get_loc(originalRadiomics.columns[0])
+            # Get the first original feature column name - the features begin in this column
+            firstOriginalFeature = originalRadiomics.columns[0]
             # Drop all the columns before the features start
-            featsOnlyRadiomics = dfPyradiomicsFeatures.iloc[:, firstOriginalIdx:]
+            featsOnlyRadiomics = dropUpToFeature(dfPyradiomicsFeatures, firstOriginalFeature, keep_feature_name=True)
         else:
-            raise ValueError("PyRadiomics file doesn't contain any diagnostics or original feature columns, so can't find beginning of features.")
+            raise ValueError("PyRadiomics file doesn't contain any diagnostics or original feature columns, so can't find beginning of features. Use dropUpToFeature and specify the last non-feature or first PyRadiomic feature column name to get only PyRadiomics features.")
 
     return featsOnlyRadiomics
 
 
-def survivalTimeColumnSetup(clinical_dataframe:pd.DataFrame,
-                            time_column_label:str,
-                            output_time_column_label:Optional[str] = "survival_time_in_years",
-                            convert_to_years:Optional[bool] = False,
-                            divide_by:Optional[int] = 365,
-                            dataset_name:Optional[str] = "config"):
-    """ 
-    Function to set up the survival time column in a clinical dataset for use in a predictive model (e.g. Cox PH)
+def dropUpToFeature(dataframe:DataFrame,
+                    feature_name:str,
+                    keep_feature_name_column:Optional[bool] = False
+                    ):
+    """ Function to drop all columns up to and possibly including the specified feature.
 
     Parameters
     ----------
-    clinical_dataframe:pd.DataFrame
-    time_column_label:str
-    convert_to_years:Optional[bool] = False
-    divide_by:Optional[int] = 365
-    dataset_name:Optional[str] = "config"
-    """    
-
-    # Confirm that time column is numeric
-    if not np.issubdtype(clinical_dataframe[time_column_label].dtype, np.number):
-        raise ValueError(f"Time column {time_column_label} is not numeric. Please confirm time label in {dataset_name}.yaml is the correct column or convert to numeric.")
-    else:
-        print(f"Time column {time_column_label} is numeric. Making copy with standardized column name.")
-        if convert_to_years:
-            print(f"Converting time column {time_column_label} from days to years.")
-            clinical_dataframe["survival_time_in_years"] = clinical_dataframe[time_column_label] / divide_by
+    dataframe : DataFrame
+        Dataframe to drop columns from.
+    feature_name : str
+        Name of the feature to drop up to.
+    keep_feature_name_column : bool, optional
+        Whether to keep the specified feature name column in the dataframe or drop it. The default is False.
+        
+    Returns
+    -------
+    dataframe : DataFrame
+        Dataframe with all columns up to and including the specified feature dropped.
+    """
+    try:
+        if keep_feature_name_column:
+            # Get the column names up to but not including the specified feature
+            column_names = dataframe.columns.to_list()[:dataframe.columns.get_loc(feature_name)]
         else:
-            clinical_dataframe["survival_time_in_years"] = clinical_dataframe[time_column_label]
+            # Get the column names up to and including the specified feature
+            column_names = dataframe.columns.to_list()[:dataframe.columns.get_loc(feature_name)+1]
 
-    return clinical_dataframe
+        # Drop all columns up to and including the specified feature
+        dataframe_dropped_columns = dataframe.drop(columns=column_names)
 
-
-def survivalEventColumnSetup(clinical_dataframe:pd.DataFrame,
-                            event_column_label:str,
-                            output_event_column_label:Optional[str] = "survival_event_binary",
-                            dataset_name:Optional[str] = "config"):
+        return dataframe_dropped_columns
     
-    # Determine what type of value is in event column
-    event_variable_type = type(clinical_dataframe[event_column_label][0])
-    if np.issubdtype(event_variable_type, np.number):
-        print(f"Event column {event_column_label} is binary. Making copy with outpute event column name.")
-        clinical_dataframe[output_event_column_label] = clinical_dataframe[event_column_label]
-
-    elif np.issubdtype(event_variable_type, np.bool_):
-        print(f"Event column {event_column_label} is boolean. Converting to binary and making copy with output event column name.")
-        clinical_dataframe[output_event_column_label] = clinical_dataframe[event_column_label].astype(int)
-
-    elif np.issubdtype(event_variable_type, np.str_):
-        print(f"Event column {event_column_label} is string. Checking what values are present in the column.")
-
-        event_column_values = clinical_dataframe[event_column_label].str.lower().unique()
-
-        if len(event_column_values) != 2:
-            raise ValueError(f"Event column {event_column_label} can only have two values. Please confirm event label in {dataset_name}.yaml is the correct column or update to have only two values.")
-        
-        # Check if alive and dead are present in the event column
-        if 'alive' in event_column_values and 'dead' in event_column_values: 
-            print(f"Converting to binary where 0 is alive and 1 is dead and making copy with output event column name.")
-
-            clinical_dataframe[output_event_column_label] = clinical_dataframe[event_column_label].str.lower().replace({'alive': '0', 'dead': '1'}).astype(int)
-
-        else:
-            raise ValueError(f"Event column {event_column_label} doesn't contain any variation of 'alive' and 'dead'. Please confirm event label in {dataset_name}.yaml is the correct column.")
-        
-    return clinical_dataframe
-
+    except KeyError:
+        print(f"Feature {feature_name} was not found as a column in dataframe. No columns dropped.")
+        return dataframe
+    
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
 
 
 def splitDataSetup(dfClinical:DataFrame,
@@ -354,7 +328,7 @@ def splitDataSetup(dfClinical:DataFrame,
         dfClinical[variable] = updatedSplitVariable
         print(f"Made copy of split variable with imputed columns: {variable}")
 
-        print("Getting split for ", variable)
+        print(f"Getting split for {variable}")
 
         for value in values:
             # Get the clinical subset for rows with value in the variable column
@@ -406,3 +380,55 @@ def savePlotFigure(sns_plot:heatmap,
 
     return
 
+
+
+def makeProcessedDataFolders(dataset_name:str,
+                             proc_data_path:str,
+                             data_sources:Optional[Union[str, list]] = [""],
+                             data_types:Optional[Union[str,list]] = [""],
+                             train_test_split:bool = False,
+                             ):
+    """ Function to make the processed data folders for a dataset.
+
+    Parameters
+    ----------
+    dataset_name : str
+        Name of the dataset to make the processed data folders for.
+    proc_data_path : str
+        Path to the processed data folder that all folders will be made under.
+    data_sources : list
+        List of data sources to make the processed data folders for.
+    data_types : list
+        List of data types to make the processed data folders for.
+    train_test_split : bool, optional
+        Whether to make the train and test processed data folders. The default is False.
+    """
+    # Set up data sources and data types as lists if they are not already
+    if type(data_sources) is str:
+        data_sources = [data_sources]
+    if type(data_types) is str:
+        data_types = [data_types]
+
+    # Make clinical procdata folder
+    path_to_proc_clinical = os.path.join(proc_data_path, dataset_name, 'clinical')
+    if not os.path.exists(path_to_proc_clinical):
+        os.makedirs(path_to_proc_clinical)
+    
+    # Make feature procdata folders
+    # Will combine each data source and data type into a list of strings
+    for combo in itertools.product([dataset_name], data_sources, data_types):
+        path_to_create = os.path.join(proc_data_path, *combo)
+        
+        if not os.path.exists(path_to_create):
+            os.makedirs(path_to_create)
+    
+    # Optionally make train and test output folders
+    if train_test_split is True:
+        split_data_types = ['clinical', 'train_features', 'test_features']
+        for combo in itertools.product([dataset_name], data_sources, ['train_test_split'], split_data_types):
+            path_to_create = os.path.join(proc_data_path, *combo)
+            
+            if not os.path.exists(path_to_create):
+                os.makedirs(path_to_create)
+    
+    return

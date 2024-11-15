@@ -7,6 +7,7 @@ outcome_variables:
     time_label: "overall_survival_in_days"
     event_label: "event_overall_survival"
     convert_to_years: True
+    event_value_mapping: {}
 
 exclusion_variables: {}
 
