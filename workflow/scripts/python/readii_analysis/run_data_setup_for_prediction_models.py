@@ -22,6 +22,7 @@ from readii_analysis.data.processing import (
 
 
 def run_data_setup_for_prediction_models(DATASET_NAME:str, EXTRACTION_METHOD:str, RAW_FEATURE_DIR_NAME:str):
+    print(f"Running data setup for {DATASET_NAME} {EXTRACTION_METHOD} feature data.")
 
     # Set variables
     RAW_DATA_PATH = Path("../../../rawdata/")
@@ -88,7 +89,7 @@ def run_data_setup_for_prediction_models(DATASET_NAME:str, EXTRACTION_METHOD:str
                                 train_test_split_settings=config['train_test_split'],
                                 )
     
-    print("{DATASET_NAME} {feature_type} feature data has been set up for prediction models.")
+    print(f"{DATASET_NAME} {EXTRACTION_METHOD} feature data has been set up for prediction models.")
 
 
 if __name__ == "__main__":
