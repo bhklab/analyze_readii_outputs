@@ -162,9 +162,9 @@ def subsetDataframe(dataframe:pd.DataFrame,
     dataframeToSubset : pd.DataFrame
         Dataframe to subset.
     includeDict : dict
-        Dictionary of column names and values to include in the subset.
+        Dictionary of column names and values to include in the subset. ex. {"column_name": ["value1", "value2"]}
     excludeDict : dict
-        Dictionary of column names and values to exclude from the subset.
+        Dictionary of column names and values to exclude from the subset. ex. {"column_name": ["value1", "value2"]}
 
     Returns
     -------
@@ -232,6 +232,30 @@ def getOnlyPyradiomicsFeatures(dfPyradiomicsFeatures:DataFrame):
 
     return featsOnlyRadiomics
 
+
+def dropUpToFeature(dataframe:DataFrame,
+                    feature_name:str
+                    ):
+    """ Function to drop all columns up to and including the specified feature.
+
+    Parameters
+    ----------
+    dataframe : DataFrame
+        Dataframe to drop columns from.
+    feature_name : str
+        Name of the feature to drop up to.
+
+    Returns
+    -------
+    dataframe : DataFrame
+        Dataframe with all columns up to and including the specified feature dropped.
+    """
+    # Get the column names up to and including the specified feature
+    column_names = dataframe.columns.to_list()[:dataframe.columns.get_loc(feature_name)+1]
+    # Drop all columns up to and including the specified feature
+    dataframe_dropped_columns = dataframe.drop(columns=column_names)
+
+    return dataframe_dropped_columns
 
 
 def splitDataSetup(dfClinical:DataFrame,
