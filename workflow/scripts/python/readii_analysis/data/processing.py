@@ -297,7 +297,7 @@ def imageTypesFeatureProcessing(raw_data_dir:str,
         outcome_labelled_image_features.to_csv(os.path.join(feature_procdata_path, f"features/labelled_{feature_type}features_only_{image_type}_{dataset_name}.csv"))
         print(f"{image_type} {feature_type} feature data has been saved to {feature_procdata_path}/features")
     
-        if train_test_split_settings:
+        if train_test_split_settings['split']:
             print("Splitting data into training and test sets.")
 
             clinical_out_file_suffix = f"merged_clinical_{dataset_name}.csv"
