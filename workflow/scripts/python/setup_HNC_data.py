@@ -8,6 +8,8 @@ run_data_setup_for_prediction_models(DATASET_NAME="RADCURE",
                                      EXTRACTION_METHOD="deep_learning", 
                                      RAW_FEATURE_DIR_NAME="fmcib_outputs")
 
+print("\n_______________________________________________________________________________________________________________\n")
+
 # Head-Neck-Radiomics-HN1
 run_data_setup_for_prediction_models(DATASET_NAME="Head-Neck-Radiomics-HN1", 
                                      EXTRACTION_METHOD="radiomic", 
@@ -15,6 +17,8 @@ run_data_setup_for_prediction_models(DATASET_NAME="Head-Neck-Radiomics-HN1",
 run_data_setup_for_prediction_models(DATASET_NAME="Head-Neck-Radiomics-HN1", 
                                      EXTRACTION_METHOD="deep_learning",
                                      RAW_FEATURE_DIR_NAME="fmcib_outputs")
+
+print("\n_______________________________________________________________________________________________________________\n")
 
 # HNSCC
 run_data_setup_for_prediction_models(DATASET_NAME="HNSCC", 
