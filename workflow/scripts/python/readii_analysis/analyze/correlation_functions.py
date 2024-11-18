@@ -303,3 +303,68 @@ def plotSelfCorrelationDistributionPlots(correlation_matrix:pd.DataFrame,
                                                                )
                                                                                                      
     return self_corr_dist_fig
+
+
+def makeBothCorrelationPlots(correlation_matrix:pd.DataFrame,
+                             axis:str,
+                             num_axis_features:int,
+                             feature_name:str,
+                             corr_cmap:Optional[str] = "nipy_spectral",
+                             dist_num_bins: Optional[int] = 450,
+                             dist_y_upper_bound:Optional[int] = None,
+                             correlation_method:Optional[str] = "",
+                             extraction_method:Optional[str] = "",
+                             dataset_name:Optional[str] = ""
+                             ):
+    """ Function to make both the correlation heatmap and distribution plots for a correlation matrix.
+
+    Parameters
+    ----------
+    correlation_matrix : pd.DataFrame
+        Dataframe containing the correlation matrix to plot.
+    axis : str
+        Axis to plot the self correlations for. Must be either "vertical" or "horizontal". The default is "vertical".
+    num_axis_features : int
+        Number of features in the axis to plot the self correlations for. This is used to get the self correlations from the correlation matrix.
+    feature_name : str
+        Name of the feature to use for the plot title and subtitle.
+    corr_cmap : str, optional
+        Name of the matplotlib colormap to use for the heatmap. The default is "nipy_spectral".
+    dist_num_bins : int, optional
+        Number of bins to use for the distribution plot. The default is 450.
+    dist_y_upper_bound : int, optional
+        Upper bound for the y-axis of the distribution plot. The default is None.
+    correlation_method : str, optional
+        Name of the correlation method to use for the plot title and subtitle. The default is "".
+    extraction_method : str, optional
+        Name of the extraction method to use for the plot title and subtitle. The default is "".
+    dataset_name : str, optional
+        Name of the dataset to use for the plot title and subtitle. The default is "".
+
+    Returns
+    -------
+    both_corr_plots : tuple
+        Tuple containing the correlation heatmap and distribution plot.
+    """
+    # Plot the correlation heatmap for the self correlations
+    self_corr_plot = plotSelfCorrelationHeatMaps(correlation_matrix = correlation_matrix,
+                                                 axis = axis,
+                                                 num_axis_features = num_axis_features,
+                                                 feature_name = feature_name,
+                                                 cmap = corr_cmap,
+                                                 correlation_method = correlation_method,
+                                                 extraction_method = extraction_method,
+                                                 dataset_name = dataset_name)
+
+    # Plot the distribution of correlation values for the self correlations
+    self_corr_dist_plot = plotSelfCorrelationDistributionPlots(correlation_matrix = correlation_matrix,
+                                                               axis = axis,
+                                                               num_axis_features = num_axis_features,
+                                                               feature_name = feature_name,
+                                                               num_bins = dist_num_bins,
+                                                               y_upper_bound=dist_y_upper_bound,
+                                                               correlation_method = correlation_method,
+                                                               extraction_method = extraction_method,
+                                                               dataset_name = dataset_name)
+
+    return self_corr_plot, self_corr_dist_plot
