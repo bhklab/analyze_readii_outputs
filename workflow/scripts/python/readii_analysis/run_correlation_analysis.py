@@ -92,6 +92,7 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
                                      correlation_method = CORRELATION_METHOD,
                                      extraction_method = extraction_method,
                                      dataset_name = dataset_name)
+            plt.close('all')
             
             # Save out the correlation heatmap
             savePlotFigure(original_self_plot,
@@ -116,6 +117,8 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
                                                                                                     correlation_method = CORRELATION_METHOD,
                                                                                                     extraction_method = extraction_method,
                                                                                                     dataset_name = dataset_name)
+        plt.close('all')
+
         # Save out the correlation heatmap
         savePlotFigure(negative_control_self_plot,
                        plot_name=f"{dataset_name}_{CORRELATION_METHOD.lower()}_corr_{negative_control}_v_{negative_control}_{extraction_method.lower()}_plot.png",
@@ -140,6 +143,8 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
                                                                               correlation_method = CORRELATION_METHOD,
                                                                               extraction_method = extraction_method,
                                                                               dataset_name = dataset_name)
+        plt.close('all')
+        
         
         savePlotFigure(orig_vs_neg_control_cross_corr_plot,
                        plot_name=f"{dataset_name}_{CORRELATION_METHOD.lower()}_corr_original_v_{negative_control}_{extraction_method.lower()}_plot.png",
