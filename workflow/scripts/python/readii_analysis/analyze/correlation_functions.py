@@ -150,3 +150,156 @@ def plotCorrelationDistribution(correlation_matrix:pd.DataFrame,
     plt.title(subtitle, fontsize=10)
 
     return dist_fig, bin_values, bin_edges
+
+
+def getVerticalSelfCorrelations(correlation_matrix:pd.DataFrame,
+                                num_vertical_features:int):
+    """ Function to get the vertical (y-axis) self correlations from a correlation matrix. Gets the top left corner of the correlation matrix.
+
+    Parameters
+    ----------
+    correlation_matrix : pd.DataFrame
+        Dataframe containing the correlation matrix to get the vertical self correlations from.
+    num_vertical_features : int
+        Number of vertical features in the correlation matrix.
+
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe containing the vertical self correlations from the correlation matrix.    
+    """
+    if num_vertical_features > correlation_matrix.shape[0]:
+        raise ValueError(f"Number of vertical features ({num_vertical_features}) is greater than the number of rows in the correlation matrix ({correlation_matrix.shape[0]}).")
+    
+    if num_vertical_features > correlation_matrix.shape[1]:
+        raise ValueError(f"Number of vertical features ({num_vertical_features}) is greater than the number of columns in the correlation matrix ({correlation_matrix.shape[1]}).")
+
+    # Get the correlation matrix for vertical vs vertical - this is the top left corner of the matrix
+    return correlation_matrix.iloc[0:num_vertical_features, 0:num_vertical_features]
+
+
+
+def getHorizontalSelfCorrelations(correlation_matrix:pd.DataFrame,
+                                  num_horizontal_features:int):
+    """ Function to get the horizontal (x-axis) self correlations from a correlation matrix. Gets the bottom right corner of the correlation matrix.
+
+    Parameters
+    ----------
+    correlation_matrix : pd.DataFrame
+        Dataframe containing the correlation matrix to get the horizontal self correlations from.
+    num_horizontal_features : int
+        Number of horizontal features in the correlation matrix.
+
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe containing the horizontal self correlations from the correlation matrix.
+    """
+    
+    if num_horizontal_features > correlation_matrix.shape[0]:
+        raise ValueError(f"Number of horizontal features ({num_horizontal_features}) is greater than the number of rows in the correlation matrix ({correlation_matrix.shape[0]}).")
+    
+    if num_horizontal_features > correlation_matrix.shape[1]:
+        raise ValueError(f"Number of horizontal features ({num_horizontal_features}) is greater than the number of columns in the correlation matrix ({correlation_matrix.shape[1]}).")
+
+    # Get the index of the start of the horizontal correlations
+    start_of_horizontal_correlations = len(correlation_matrix.columns) - num_horizontal_features
+
+    # Get the correlation matrix for horizontal vs horizontal - this is the bottom right corner of the matrix
+    return correlation_matrix.iloc[start_of_horizontal_correlations:, start_of_horizontal_correlations:]
+
+
+def plotSelfCorrelationHeatMaps(correlation_matrix:pd.DataFrame,
+                                axis:str,
+                                num_axis_features:int,
+                                feature_name:str,
+                                correlation_method:Optional[str] = "",
+                                extraction_method:Optional[str] = "",
+                                dataset_name:Optional[str] = "",
+                                cmap:Optional[str] = "nipy_spectral",
+                                ):
+    """ Function to plot a correlation heatmap for the vertical (y-axis) and horizontal (x-axis) self correlations.
+
+    Parameters
+    ----------
+    correlation_matrix : pd.DataFrame
+        Dataframe containing the correlation matrix to plot.
+    axis : str
+        Axis to plot the self correlations for. Must be either "vertical" or "horizontal". The default is "vertical".
+    num_axis_features : int
+        Number of features in the axis to plot the self correlations for. This is used to get the self correlations from the correlation matrix.
+    feature_name : str
+        Name of the feature to use for the plot title and subtitle.
+    correlation_method : str, optional
+        Name of the correlation method to use for the plot title and subtitle. The default is "".
+    extraction_method : str, optional
+        Name of the extraction method to use for the plot title and subtitle. The default is "".
+    dataset_name : str, optional
+        Name of the dataset to use for the plot title and subtitle. The default is "".
+    cmap : str, optional
+        Name of the matplotlib colormap to use for the heatmap. The default is "nipy_spectral".
+
+    Returns
+    -------
+    self_plot : seaborn.heatmap
+        Seaborn heatmap containing the self correlations.
+    """
+
+    if axis == "vertical":
+        # Get the correlation matrix for vertical vs vertical
+        # This is the top left corner of the matrix
+        self_correlations = getVerticalSelfCorrelations(correlation_matrix, num_axis_features)
+    elif axis == "horizontal":
+        # Get the correlation matrix for horizontal vs horizontal
+        # This is the bottom right corner of the matrix
+        self_correlations = getHorizontalSelfCorrelations(correlation_matrix, num_axis_features)
+    else:
+        raise ValueError(f"Axis must be either 'vertical' or 'horizontal'. Provided axis is {axis}.")
+
+    # Create correlation heatmap for vertical vs vertical
+    self_plot = plotCorrelationHeatmap(self_correlations,
+                                       diagonal = True,
+                                       triangle = "lower",
+                                       cmap = cmap,
+                                       xlabel = feature_name,
+                                       ylabel = feature_name,
+                                       title = f"{correlation_method.capitalize()} Self Correlations for {dataset_name} {extraction_method.capitalize()} Features",
+                                       subtitle = f"{feature_name} vs. {feature_name}")
+
+    return self_plot
+
+
+
+def plotSelfCorrelationDistributionPlots(correlation_matrix:pd.DataFrame,
+                                         axis:str,
+                                         num_axis_features:int,
+                                         feature_name:str,
+                                         num_bins: Optional[int] = 450,
+                                         y_upper_bound:Optional[int] = None,
+                                         correlation_method:Optional[str] = "",
+                                         extraction_method:Optional[str] = "",
+                                         dataset_name:Optional[str] = "",
+                                         ):
+    
+    if axis == "vertical":
+        # Get the correlation matrix for vertical vs vertical
+        # This is the top left corner of the matrix
+        self_correlations = getVerticalSelfCorrelations(correlation_matrix, num_axis_features)
+    elif axis == "horizontal":
+        # Get the correlation matrix for horizontal vs horizontal
+        # This is the bottom right corner of the matrix
+        self_correlations = getHorizontalSelfCorrelations(correlation_matrix, num_axis_features)
+    else:
+        raise ValueError(f"Axis must be either 'vertical' or 'horizontal'. Provided axis is {axis}.")
+    
+    # Plot the distribution of correlation values for the self correlations
+    self_corr_dist_fig, _, _ = plotCorrelationDistribution(self_correlations,
+                                                               num_bins = num_bins,
+                                                               xlabel = f"{correlation_method.capitalize()} Correlation",
+                                                               ylabel = "Frequency",
+                                                               y_upper_bound=y_upper_bound,
+                                                               title = f"Distribution of {correlation_method.capitalize()} Self Correlations for {dataset_name} {extraction_method.capitalize()} Features",
+                                                               subtitle = f"{feature_name} vs. {feature_name}"
+                                                               )
+                                                                                                     
+    return self_corr_dist_fig
