@@ -13,8 +13,7 @@ from readii_analysis.data.helpers import (
 
 from readii_analysis.analyze.correlation_functions import ( 
     getFeatureCorrelations, 
-    plotCorrelationHeatmap, 
-    plotCorrelationDistribution)
+    makeBothCorrelationPlots)
 
 
 def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_feature_dir:str):
@@ -23,6 +22,10 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
     PROC_DATA_PATH = "../../../procdata/"
     RESULTS_DATA_PATH = f"../../../results/"
     CONFIG_DIR_PATH = "../../config/"
+    CORRELATION_METHOD = "pearson"
+    DIST_NUM_BINS = 450
+    DIST_Y_UPPER_BOUND = None
+    CORR_COLOR_MAP = "nipy_spectral"
 
     # Load config file
     config = loadImageDatasetConfig(dataset_name, CONFIG_DIR_PATH)
@@ -31,8 +34,10 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
     makeProcessedDataFolders(dataset_name=dataset_name,
                             proc_data_path=RESULTS_DATA_PATH,
                             data_sources=extraction_method,
-                            data_types=["correlation_distribution_plots", "correlation_heatmap_plots"],
-                            train_test_split=config["train_test_split"]["split"])
+                            data_types=["correlation_distribution_plots", "correlation_heatmap_plots"])
+    heatmap_dir_path=os.path.join(RESULTS_DATA_PATH, dataset_name, extraction_method.lower(), "correlation_heatmap_plots")
+    dist_dir_path=os.path.join(RESULTS_DATA_PATH, dataset_name, extraction_method.lower(), "correlation_distribution_plots")
+
     
     # Load in all processed feature sets - should have one file for each image type in the extracted_image_feature_dir
     extracted_image_feature_dir = os.path.join(PROC_DATA_PATH, dataset_name, extraction_method, extracted_feature_dir)
@@ -40,13 +45,87 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
                                                         image_types=config["image_types"],
                                                         drop_labels=True)
 
-    print("Feature sets available for analysis:")
-    for feature_set in image_feature_sets.keys():
-        print("  ->", feature_set)
 
-    # Create all possible combinations of feature sets 
-    # orig vs. negative control gets you orig vs orig, neg vs neg, orig vs neg - do this x# of negative controls
-    # 
+    image_type_list = list(image_feature_sets.keys())
+    # print("Feature sets available for analysis:")
+    # for image_type in image_type_list:
+    #     print("  ->", image_type)
+
+    # Get list of negative control image types 
+    negative_control_list = image_type_list
+    negative_control_list.remove("original")
+
+    make_original_plots = True
+    for negative_control in negative_control_list:
+        # Going to perform Pearson correlation between feature sets from the original and each negative control image
+        # y-axis is original (so vertical = original from now on)
+        vertical_features = image_feature_sets["original"]
+        vertical_feature_count = len(vertical_features.columns)
+
+        # x-axis is the negative control (so horizontal = negative control from now on)
+        horizontal_features = image_feature_sets[negative_control]
+        horizontal_feature_count = len(horizontal_features.columns)
+
+        # Perform the correlation - will return a dataframe that has length and width of 2x the number of features
+        feature_correlation_matrix = getFeatureCorrelations(vertical_features = vertical_features,
+                                                            horizontal_features = horizontal_features,
+                                                            method = CORRELATION_METHOD,
+                                                            vertical_feature_name="original",
+                                                            horizontal_feature_name=negative_control)
+
+       ################### SELF-CORRELATION PLOTS ###################
+        # Only save out the original vs original plots once
+        if make_original_plots:
+            make_original_plots = False
+
+            original_self_plot, original_self_corr_dist_plot = makeBothCorrelationPlots(correlation_matrix = feature_correlation_matrix,
+                                     axis = "vertical",
+                                     num_axis_features = vertical_feature_count,
+                                     feature_name = "original",
+                                     corr_cmap = CORR_COLOR_MAP,
+                                     dist_num_bins = DIST_NUM_BINS,
+                                     dist_y_upper_bound = DIST_Y_UPPER_BOUND,
+                                     correlation_method = CORRELATION_METHOD,
+                                     extraction_method = extraction_method,
+                                     dataset_name = dataset_name)
+            
+            # Save out the correlation heatmap
+            savePlotFigure(original_self_plot,
+                           plot_name=f"{dataset_name}_{CORRELATION_METHOD.lower()}_corr_original_v_original_{extraction_method.lower()}_plot.png",
+                           output_dir_path=heatmap_dir_path)
+            
+            # Save out the distribution plot
+            savePlotFigure(original_self_corr_dist_plot,
+                           plot_name=f"{dataset_name}_{CORRELATION_METHOD.lower()}_correlation_distribution_original_v_original_{extraction_method.lower()}_plot.png",
+                           output_dir_path=dist_dir_path)
+        # End make original plots section
+
+        # Plot the correlation heatmap for the negative control vs negative control
+        negative_control_self_plot, negative_control_self_corr_dist_plot = makeBothCorrelationPlots(correlation_matrix = feature_correlation_matrix,
+                                                                                                    axis = "horizontal",
+                                                                                                    num_axis_features = horizontal_feature_count,
+                                                                                                    feature_name = negative_control,
+                                                                                                    corr_cmap = CORR_COLOR_MAP,
+                                                                                                    dist_num_bins = DIST_NUM_BINS,
+                                                                                                    dist_y_upper_bound = DIST_Y_UPPER_BOUND,
+                                                                                                    correlation_method = CORRELATION_METHOD,
+                                                                                                    extraction_method = extraction_method,
+                                                                                                    dataset_name = dataset_name)
+        # Save out the correlation heatmap
+        savePlotFigure(negative_control_self_plot,
+                       plot_name=f"{dataset_name}_{CORRELATION_METHOD.lower()}_corr_{negative_control}_v_{negative_control}_{extraction_method.lower()}_plot.png",
+                       output_dir_path=heatmap_dir_path)
+        
+        # Save out the distribution plot
+        savePlotFigure(negative_control_self_corr_dist_plot,
+                       plot_name=f"{dataset_name}_{CORRELATION_METHOD.lower()}_correlation_distribution_{negative_control}_v_{negative_control}_{extraction_method.lower()}_plot.png",
+                       output_dir_path=dist_dir_path)
+        
+
+        ################### CROSS-CORRELATION PLOTS ###################
+
+
+
 
 
 
