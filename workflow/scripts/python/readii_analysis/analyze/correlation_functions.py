@@ -75,7 +75,8 @@ def plotCorrelationHeatmap(correlation_matrix_df:pd.DataFrame,
 
     Returns
     -------
-    matplolib.pyplot.figure
+    corr_fig : matplotlib.pyplot.figure
+        Figure object containing a Seaborn heatmap.
     """
     if diagonal:
         if triangle == "lower":
@@ -126,6 +127,36 @@ def plotCorrelationDistribution(correlation_matrix:pd.DataFrame,
                                 title:Optional[str] = "Distribution of Correlations for Features",
                                 subtitle:Optional[str] = "",
                                 ):
+    """ Function to plot a distribution of correlation values for a correlation matrix.
+
+    Parameters
+    ----------
+    correlation_matrix : pd.DataFrame
+        Dataframe containing the correlation matrix to plot.
+    num_bins : int, optional
+        Number of bins to use for the distribution plot. The default is 100.
+    xlabel : str, optional
+        Label for the x-axis. The default is "Correlations".
+    ylabel : str, optional
+        Label for the y-axis. The default is "Frequency".
+    y_lower_bound : int, optional
+        Lower bound for the y-axis of the distribution plot. The default is 0.
+    y_upper_bound : int, optional
+        Upper bound for the y-axis of the distribution plot. The default is None.
+    title : str, optional
+        Title for the plot. The default is "Distribution of Correlations for Features".
+    subtitle : str, optional
+        Subtitle for the plot. The default is "".
+
+    Returns
+    -------
+    dist_fig : plt.Figure
+        Figure object containing the histogram of correlation values.
+    bin_values : np.ndarray or list of arrays
+        Numpy array containing the values in each bin for the histogram.
+    bin_edges : np.ndarray
+        Numpy array containing the bin edges for the histogram.
+    """
     
     # Convert to numpy to use histogram function
     feature_correlation_arr = correlation_matrix.to_numpy()
@@ -154,7 +185,7 @@ def plotCorrelationDistribution(correlation_matrix:pd.DataFrame,
 
 def getVerticalSelfCorrelations(correlation_matrix:pd.DataFrame,
                                 num_vertical_features:int):
-    """ Function to get the vertical (y-axis) self correlations from a correlation matrix. Gets the top left corner of the correlation matrix.
+    """ Function to get the vertical (y-axis) self correlations from a correlation matrix. Gets the top left quadrant of the correlation matrix.
 
     Parameters
     ----------
@@ -181,7 +212,7 @@ def getVerticalSelfCorrelations(correlation_matrix:pd.DataFrame,
 
 def getHorizontalSelfCorrelations(correlation_matrix:pd.DataFrame,
                                   num_horizontal_features:int):
-    """ Function to get the horizontal (x-axis) self correlations from a correlation matrix. Gets the bottom right corner of the correlation matrix.
+    """ Function to get the horizontal (x-axis) self correlations from a correlation matrix. Gets the bottom right quadrant of the correlation matrix.
 
     Parameters
     ----------
@@ -207,6 +238,33 @@ def getHorizontalSelfCorrelations(correlation_matrix:pd.DataFrame,
 
     # Get the correlation matrix for horizontal vs horizontal - this is the bottom right corner of the matrix
     return correlation_matrix.iloc[start_of_horizontal_correlations:, start_of_horizontal_correlations:]
+
+
+def getCrossCorrelationMatrix(correlation_matrix:pd.DataFrame,
+                              num_vertical_features:int):
+    """ Function to get the cross correlation matrix subsection for a correlation matrix. Gets the top right quadrant of the correlation matrix so vertical and horizontal features are correctly labeled.
+
+    Parameters
+    ----------
+    correlation_matrix : pd.DataFrame
+        Dataframe containing the correlation matrix to get the cross correlation matrix subsection from.
+    num_vertical_features : int
+        Number of vertical features in the correlation matrix.
+    
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe containing the cross correlations from the correlation matrix.
+    """
+
+    if num_vertical_features > correlation_matrix.shape[0]:
+        raise ValueError(f"Number of vertical features ({num_vertical_features}) is greater than the number of rows in the correlation matrix ({correlation_matrix.shape[0]}).")
+    
+    if num_vertical_features > correlation_matrix.shape[1]:
+        raise ValueError(f"Number of vertical features ({num_vertical_features}) is greater than the number of columns in the correlation matrix ({correlation_matrix.shape[1]}).")
+    
+    return correlation_matrix.iloc[0:num_vertical_features, num_vertical_features:]
+
 
 
 def plotSelfCorrelationHeatMaps(correlation_matrix:pd.DataFrame,
@@ -241,8 +299,8 @@ def plotSelfCorrelationHeatMaps(correlation_matrix:pd.DataFrame,
 
     Returns
     -------
-    self_plot : seaborn.heatmap
-        Seaborn heatmap containing the self correlations.
+    self_plot : matplotlib.pyplot.figure
+        Figure object containing a Seaborn heatmap of the vertical or horizontalself correlations from the correlation matrix.
     """
 
     if axis == "vertical":
@@ -270,6 +328,58 @@ def plotSelfCorrelationHeatMaps(correlation_matrix:pd.DataFrame,
 
 
 
+def plotCrossCorrelationHeatmap(correlation_matrix:pd.DataFrame,
+                                num_vertical_features:int,
+                                vertical_feature_name:str,
+                                horizontal_feature_name:str,
+                                correlation_method:Optional[str] = "",
+                                extraction_method:Optional[str] = "",
+                                dataset_name:Optional[str] = "",
+                                cmap:Optional[str] = "nipy_spectral"):
+    """ Function to plot heatmap for a the cross-correlation section of a correlation matrix. Will be the top right quadrant of the correlation matrix so vertical and horizontal features are correctly labeled.
+
+    Parameters
+    ----------
+    correlation_matrix : pd.DataFrame
+        Dataframe containing the correlation matrix to plot.
+    num_vertical_features : int
+        Number of vertical (y-axis) features in the correlation matrix.
+        The number of vertical features must be less than the number of rows in the correlation matrix.
+    vertical_feature_name : str
+        Name of the vertical feature to use for the plot title and subtitle.
+    horizontal_feature_name : str
+        Name of the horizontal feature to use for the plot title and subtitle.
+    correlation_method : str, optional
+        Name of the correlation method to use for the plot title and subtitle. The default is "".
+    extraction_method : str, optional
+        Name of the extraction method to use for the plot title and subtitle. The default is "".
+    dataset_name : str, optional
+        Name of the dataset to use for the plot title and subtitle. The default is "".
+    cmap : str, optional
+        Name of the matplotlib colormap to use for the heatmap. The default is "nipy_spectral".
+    
+    Returns
+    -------
+    cross_corr_plot : matplotlib.pyplot.figure
+        Figure object containing a Seaborn heatmap of the cross correlations from the correlation matrix.
+    """
+    
+    # Get the cross correlation matrix from the main correlation matrix
+    cross_corr_matrix = getCrossCorrelationMatrix(correlation_matrix, num_vertical_features)
+
+    # Create heatmap for the cross correlation matrix
+    cross_corr_plot = plotCorrelationHeatmap(cross_corr_matrix,
+                                             diagonal = False,
+                                             cmap=cmap,
+                                             xlabel = vertical_feature_name,
+                                             ylabel = horizontal_feature_name,
+                                             title = f"{correlation_method.capitalize()} Cross Correlations for {dataset_name} {extraction_method.capitalize()} Features",
+                                             subtitle = f"{vertical_feature_name} vs. {horizontal_feature_name}")
+
+    return cross_corr_plot
+
+
+
 def plotSelfCorrelationDistributionPlots(correlation_matrix:pd.DataFrame,
                                          axis:str,
                                          num_axis_features:int,
@@ -280,6 +390,34 @@ def plotSelfCorrelationDistributionPlots(correlation_matrix:pd.DataFrame,
                                          extraction_method:Optional[str] = "",
                                          dataset_name:Optional[str] = "",
                                          ):
+    """ Function to plot a distribution of self correlation values for a correlation matrix.
+
+    Parameters
+    ----------
+    correlation_matrix : pd.DataFrame
+        Dataframe containing the correlation matrix to plot.
+    axis : str
+        Axis to plot the self correlations for. Must be either "vertical" or "horizontal".
+    num_axis_features : int
+        Number of features in the axis to plot the self correlations for. This is used to get the self correlations from the correlation matrix.
+    feature_name : str
+        Name of the feature to use for the plot title and subtitle.
+    num_bins : int, optional
+        Number of bins to use for the distribution plot. The default is 450.
+    y_upper_bound : int, optional
+        Upper bound for the y-axis of the distribution plot. The default is None.
+    correlation_method : str, optional
+        Name of the correlation method to use for the plot title and subtitle. The default is "".
+    extraction_method : str, optional
+        Name of the extraction method to use for the plot title and subtitle. The default is "".
+    dataset_name : str, optional
+        Name of the dataset to use for the plot title and subtitle. The default is "".
+
+    Returns
+    -------
+    self_corr_dist_fig : plt.Figure
+        Figure object containing the histogram of self correlation values.
+    """
     
     if axis == "vertical":
         # Get the correlation matrix for vertical vs vertical
@@ -305,7 +443,64 @@ def plotSelfCorrelationDistributionPlots(correlation_matrix:pd.DataFrame,
     return self_corr_dist_fig
 
 
-def makeBothCorrelationPlots(correlation_matrix:pd.DataFrame,
+def plotCrossCorrelationDistributionPlots(correlation_matrix:pd.DataFrame,
+                                          num_vertical_features:int,
+                                          vertical_feature_name:str,
+                                          horizontal_feature_name:str,
+                                          num_bins: Optional[int] = 450,
+                                          y_upper_bound:Optional[int] = None,
+                                          correlation_method:Optional[str] = "",
+                                          extraction_method:Optional[str] = "",
+                                          dataset_name:Optional[str] = "",
+                                          ):
+    """ Function to plot a distribution of cross correlation values for a correlation matrix. Will be the top right quadrant of the correlation matrix so vertical and horizontal features are correctly labeled.
+
+    Parameters
+    ----------
+    correlation_matrix : pd.DataFrame
+        Dataframe containing the correlation matrix to plot.
+    num_vertical_features : int
+        Number of vertical (y-axis) features in the correlation matrix.
+        The number of vertical features must be less than the number of rows and columns in the correlation matrix.
+    vertical_feature_name : str
+        Name of the vertical feature to use for the plot title and subtitle.
+    horizontal_feature_name : str
+        Name of the horizontal feature to use for the plot title and subtitle.
+    num_bins : int, optional
+        Number of bins to use for the distribution plot. The default is 450.
+    y_upper_bound : int, optional
+        Upper bound for the y-axis of the distribution plot. The default is None.
+    correlation_method : str, optional
+        Name of the correlation method to use for the plot title and subtitle. The default is "".
+    extraction_method : str, optional
+        Name of the extraction method to use for the plot title and subtitle. The default is "".
+    dataset_name : str, optional
+        Name of the dataset to use for the plot title and subtitle. The default is "".
+
+    Returns
+    -------
+    cross_corr_dist_fig : plt.Figure
+        Figure object containing the histogram of cross correlation values.
+    """
+    
+    # Get the cross correlation matrix from the main correlation matrix
+    cross_corr_matrix = getCrossCorrelationMatrix(correlation_matrix, num_vertical_features)
+
+    # Create heatmap for the cross correlation matrix
+    cross_corr_dist_fig = plotCorrelationDistribution(cross_corr_matrix,
+                                                      num_bins = num_bins,
+                                                      xlabel = f"{correlation_method.capitalize()} Correlation",
+                                                      ylabel = "Frequency",
+                                                      y_upper_bound = y_upper_bound,
+                                                      title = f"Distribution of {correlation_method.capitalize()} Cross Correlations for {dataset_name} {extraction_method.capitalize()} Features",
+                                                      subtitle = f"{vertical_feature_name} vs. {horizontal_feature_name}"
+                                                      )
+
+    return cross_corr_dist_fig
+
+
+
+def makeBothSelfCorrelationPlots(correlation_matrix:pd.DataFrame,
                              axis:str,
                              num_axis_features:int,
                              feature_name:str,
@@ -343,8 +538,10 @@ def makeBothCorrelationPlots(correlation_matrix:pd.DataFrame,
 
     Returns
     -------
-    both_corr_plots : tuple
-        Tuple containing the correlation heatmap and distribution plot.
+    self_corr_plot : matplotlib.pyplot.figure
+        Figure object containing a Seaborn heatmap of the self correlations from the correlation matrix.
+    self_corr_dist_plot : matplotlib.pyplot.figure
+        Figure object containing a histogram of the distribution of self correlations from the correlation matrix.
     """
     # Plot the correlation heatmap for the self correlations
     self_corr_plot = plotSelfCorrelationHeatMaps(correlation_matrix = correlation_matrix,
@@ -368,3 +565,71 @@ def makeBothCorrelationPlots(correlation_matrix:pd.DataFrame,
                                                                dataset_name = dataset_name)
 
     return self_corr_plot, self_corr_dist_plot
+
+
+def makeBothCrossCorrelationPlots(correlation_matrix:pd.DataFrame,
+                                  num_vertical_features:int,
+                                  vertical_feature_name:str,
+                                  horizontal_feature_name:str,
+                                  corr_cmap:Optional[str] = "nipy_spectral",
+                                  dist_num_bins: Optional[int] = 450,
+                                  dist_y_upper_bound:Optional[int] = None,
+                                  correlation_method:Optional[str] = "",
+                                  extraction_method:Optional[str] = "",
+                                  dataset_name:Optional[str] = "",
+                                  ):
+    """ Function to make both the self correlation heatmap and distribution plots for a correlation matrix.
+
+    Parameters
+    ----------
+    correlation_matrix : pd.DataFrame
+        Dataframe containing the correlation matrix to plot.
+    num_vertical_features : int
+        Number of vertical (y-axis) features in the correlation matrix.
+        The number of vertical features must be less than the number of rows and columns in the correlation matrix.
+    vertical_feature_name : str
+        Name of the vertical feature to use for the plot title and subtitle.
+    horizontal_feature_name : str
+        Name of the horizontal feature to use for the plot title and subtitle.
+    corr_cmap : str, optional
+        Name of the matplotlib colormap to use for the heatmap. The default is "nipy_spectral".
+    dist_num_bins : int, optional
+        Number of bins to use for the distribution plot. The default is 450.
+    dist_y_upper_bound : int, optional
+        Upper bound for the y-axis of the distribution plot. The default is None.
+    correlation_method : str, optional
+        Name of the correlation method to use for the plot title and subtitle. The default is "".
+    extraction_method : str, optional
+        Name of the extraction method to use for the plot title and subtitle. The default is "".
+    dataset_name : str, optional
+        Name of the dataset to use for the plot title and subtitle. The default is "".
+
+    Returns
+    -------
+    cross_corr_plot : matplotlib.pyplot.figure
+        Figure object containing a Seaborn heatmap of the cross correlations from the correlation matrix.
+    cross_corr_dist_plot : matplotlib.pyplot.figure
+        Figure object containing a histogram of the distribution of cross correlations from the correlation matrix.
+    """
+    # Plot the correlation heatmap for the cross correlations
+    cross_corr_plot = plotCrossCorrelationHeatmap(correlation_matrix = correlation_matrix,
+                                                  num_vertical_features = num_vertical_features,
+                                                  vertical_feature_name = vertical_feature_name,
+                                                  horizontal_feature_name = horizontal_feature_name,
+                                                  corr_cmap = corr_cmap,
+                                                  correlation_method = correlation_method,
+                                                  extraction_method = extraction_method,
+                                                  dataset_name = dataset_name)
+    
+    # Plot the distribution of correlation values for the cross correlations
+    cross_corr_dist_plot = plotCrossCorrelationDistributionPlots(correlation_matrix = correlation_matrix,
+                                                                 num_vertical_features = num_vertical_features,
+                                                                 vertical_feature_name = vertical_feature_name,
+                                                                 horizontal_feature_name = horizontal_feature_name,
+                                                                 num_bins = dist_num_bins,
+                                                                 y_upper_bound = dist_y_upper_bound,
+                                                                 correlation_method = correlation_method,
+                                                                 extraction_method = extraction_method,
+                                                                 dataset_name = dataset_name)
+
+    return cross_corr_plot, cross_corr_dist_plot
