@@ -487,7 +487,7 @@ def plotCrossCorrelationDistributionPlots(correlation_matrix:pd.DataFrame,
     cross_corr_matrix = getCrossCorrelationMatrix(correlation_matrix, num_vertical_features)
 
     # Create heatmap for the cross correlation matrix
-    cross_corr_dist_fig = plotCorrelationDistribution(cross_corr_matrix,
+    cross_corr_dist_fig, _, _ = plotCorrelationDistribution(cross_corr_matrix,
                                                       num_bins = num_bins,
                                                       xlabel = f"{correlation_method.capitalize()} Correlation",
                                                       ylabel = "Frequency",
@@ -616,7 +616,7 @@ def makeBothCrossCorrelationPlots(correlation_matrix:pd.DataFrame,
                                                   num_vertical_features = num_vertical_features,
                                                   vertical_feature_name = vertical_feature_name,
                                                   horizontal_feature_name = horizontal_feature_name,
-                                                  corr_cmap = corr_cmap,
+                                                  cmap = corr_cmap,
                                                   correlation_method = correlation_method,
                                                   extraction_method = extraction_method,
                                                   dataset_name = dataset_name)
