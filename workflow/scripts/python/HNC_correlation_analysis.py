@@ -5,23 +5,32 @@ run_correlation_analysis(dataset_name="Head-Neck-Radiomics-HN1",
                          extraction_method="radiomic",
                          extracted_feature_dir="features/labelled_features_only")
 
+print("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
+
 run_correlation_analysis(dataset_name="Head-Neck-Radiomics-HN1",
                          extraction_method="deep_learning",
                          extracted_feature_dir="features/labelled_features_only")
 
+print("\n_______________________________________________________________________________________________________________\n")
 
 run_correlation_analysis(dataset_name = "HNSCC",
                          extraction_method = "radiomic",
                          extracted_feature_dir="features/labelled_features_only")
+
+print("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
 
 run_correlation_analysis(dataset_name = "HNSCC",
                          extraction_method = "deep_learning",
                          extracted_feature_dir="features/labelled_features_only")
 
+print("\n_______________________________________________________________________________________________________________\n")
+
 
 run_correlation_analysis(dataset_name = "RADCURE",
                          extraction_method = "radiomic",
                          extracted_feature_dir="train_test_split/train_features")
+
+print("\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
 
 run_correlation_analysis(dataset_name = "RADCURE",
                          extraction_method = "deep_learning",
