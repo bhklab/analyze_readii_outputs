@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 import argparse
+from typing import Optional
 
 from readii_analysis.data.helpers import ( 
     loadFeatureFilesFromImageTypes, 
@@ -17,15 +18,17 @@ from readii_analysis.analyze.correlation_functions import (
     makeBothCrossCorrelationPlots)
 
 
-def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_feature_dir:str):
+def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_feature_dir:str, 
+                             self_dist_num_bins:Optional[int] = 450, self_dist_y_upper_bound:Optional[int] = None,
+                             cross_dist_num_bins:Optional[int] = 450, cross_dist_y_upper_bound:Optional[int] = None):
     print(f"Running correlation analysis for {dataset_name} {extraction_method} feature data.")
 
     PROC_DATA_PATH = "../../../procdata/"
     RESULTS_DATA_PATH = f"../../../results/"
     CONFIG_DIR_PATH = "../../config/"
     CORRELATION_METHOD = "pearson"
-    DIST_NUM_BINS = 450
-    DIST_Y_UPPER_BOUND = None
+    # DIST_NUM_BINS = 450
+    # DIST_Y_UPPER_BOUND = None
     CORR_COLOR_MAP = "nipy_spectral"
 
     # Load config file
@@ -44,7 +47,8 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
     extracted_image_feature_dir = os.path.join(PROC_DATA_PATH, dataset_name, extraction_method, extracted_feature_dir)
     image_feature_sets = loadFeatureFilesFromImageTypes(extracted_feature_dir = extracted_image_feature_dir,
                                                         image_types=config["image_types"],
-                                                        drop_labels=True)
+                                                        drop_labels=True,
+                                                        labels_to_drop=["patient_ID","survival_time_in_years","survival_event_binary"])
 
 
     image_type_list = list(image_feature_sets.keys())
@@ -87,8 +91,8 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
                                      num_axis_features = vertical_feature_count,
                                      feature_name = "original",
                                      corr_cmap = CORR_COLOR_MAP,
-                                     dist_num_bins = DIST_NUM_BINS,
-                                     dist_y_upper_bound = DIST_Y_UPPER_BOUND,
+                                     dist_num_bins = self_dist_num_bins,
+                                     dist_y_upper_bound = self_dist_y_upper_bound,
                                      correlation_method = CORRELATION_METHOD,
                                      extraction_method = extraction_method,
                                      dataset_name = dataset_name)
@@ -112,8 +116,8 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
                                                                                                     num_axis_features = horizontal_feature_count,
                                                                                                     feature_name = negative_control,
                                                                                                     corr_cmap = CORR_COLOR_MAP,
-                                                                                                    dist_num_bins = DIST_NUM_BINS,
-                                                                                                    dist_y_upper_bound = DIST_Y_UPPER_BOUND,
+                                                                                                    dist_num_bins = self_dist_num_bins,
+                                                                                                    dist_y_upper_bound = self_dist_y_upper_bound,
                                                                                                     correlation_method = CORRELATION_METHOD,
                                                                                                     extraction_method = extraction_method,
                                                                                                     dataset_name = dataset_name)
@@ -138,8 +142,8 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
                                                                               vertical_feature_name = "original",
                                                                               horizontal_feature_name =  negative_control,
                                                                               corr_cmap = CORR_COLOR_MAP,
-                                                                              dist_num_bins = DIST_NUM_BINS,
-                                                                              dist_y_upper_bound = DIST_Y_UPPER_BOUND,
+                                                                              dist_num_bins = cross_dist_num_bins,
+                                                                              dist_y_upper_bound = cross_dist_y_upper_bound,
                                                                               correlation_method = CORRELATION_METHOD,
                                                                               extraction_method = extraction_method,
                                                                               dataset_name = dataset_name)
