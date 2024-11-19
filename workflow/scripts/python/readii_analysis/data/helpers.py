@@ -376,7 +376,7 @@ def savePlotFigure(sns_plot:heatmap,
 
     # Save out the plot
     sns_plot.get_figure().savefig(output_path, bbox_inches='tight')
-    print(f"Saved out plot to {output_path}")
+    # print(f"Saved out plot to {output_path}")
 
     return
 

@@ -32,15 +32,15 @@ def run_data_setup_for_prediction_models(DATASET_NAME:str, EXTRACTION_METHOD:str
     # Load config file
     config = loadImageDatasetConfig(DATASET_NAME, CONFIG_DIR_PATH)
 
-    #%% MAKE OUTPUT DIRECTORIES
+    # MAKE OUTPUT DIRECTORIES
     # Make output directories for this pipeline
     makeProcessedDataFolders(dataset_name=DATASET_NAME,
                             proc_data_path=PROC_DATA_PATH,
                             data_sources=EXTRACTION_METHOD,
-                            data_types=['clinical', 'features'],
+                            data_types=['clinical', 'features/features_with_metadata', 'features/labelled_features_only'],
                             train_test_split=config["train_test_split"]["split"])
 
-    #%% CLINICAL DATA PROCESSING
+    #CLINICAL DATA PROCESSING
     # Load clinical data
     clinical_data = loadFileToDataFrame(os.path.join(RAW_DATA_PATH, DATASET_NAME, "clinical", f"{DATASET_NAME}.csv"))
     print(f"Clinical data loaded with {len(clinical_data)} patients.\n")
@@ -80,7 +80,7 @@ def run_data_setup_for_prediction_models(DATASET_NAME:str, EXTRACTION_METHOD:str
     # Construct path to the directory containing the raw image feature files
     feature_dir_path = os.path.join(RAW_DATA_PATH, DATASET_NAME, RAW_FEATURE_DIR_NAME)
 
-    imageTypesFeatureProcessing(raw_data_dir=feature_dir_path,
+    image_types_found = imageTypesFeatureProcessing(raw_data_dir=feature_dir_path,
                                 feature_type=EXTRACTION_METHOD,
                                 proc_data_path=PROC_DATA_PATH,
                                 clinical_data=clinical_data,
@@ -89,6 +89,9 @@ def run_data_setup_for_prediction_models(DATASET_NAME:str, EXTRACTION_METHOD:str
                                 train_test_split_settings=config['train_test_split'],
                                 )
     
+    # TODO: save image_types_found to config or to a file
+
+
     print(f"{DATASET_NAME} {EXTRACTION_METHOD} feature data has been set up for prediction models.")
 
 
