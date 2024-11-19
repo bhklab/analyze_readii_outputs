@@ -21,6 +21,30 @@ from readii_analysis.analyze.correlation_functions import (
 def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_feature_dir:str, 
                              self_dist_num_bins:Optional[int] = 450, self_dist_y_upper_bound:Optional[int] = None,
                              cross_dist_num_bins:Optional[int] = 450, cross_dist_y_upper_bound:Optional[int] = None):
+    """ Function to run correlation analysis for a dataset.
+
+    Parameters
+    ----------
+    dataset_name : str
+        Name of the dataset to run correlation analysis for.
+    extraction_method : str
+        Name of the extraction method to use for the correlation analysis. Must be either "radiomic" or "deep_learning".
+    extracted_feature_dir : str
+        Path to the directory containing the extracted feature csv files.
+    self_dist_num_bins : int, optional
+        Number of bins to use for the self-correlation distribution plots. The default is 450.
+    self_dist_y_upper_bound : int, optional
+        Upper bound for the y-axis of the self-correlation distribution plots. The default is None.
+    cross_dist_num_bins : int, optional
+        Number of bins to use for the cross-correlation distribution plots. The default is 450.
+    cross_dist_y_upper_bound : int, optional
+        Upper bound for the y-axis of the cross-correlation distribution plots. The default is None.
+
+    Returns
+    -------
+    None
+    """
+
     print(f"Running correlation analysis for {dataset_name} {extraction_method} feature data.")
 
     PROC_DATA_PATH = "../../../procdata/"
@@ -86,7 +110,7 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
             print("Making original self-correlation plots")
             make_original_plots = False
 
-            original_self_plot, original_self_corr_dist_plot = makeBothSelfCorrelationPlots(correlation_matrix = feature_correlation_matrix,
+            original_self_corr_plot, original_self_corr_dist_plot = makeBothSelfCorrelationPlots(correlation_matrix = feature_correlation_matrix,
                                      axis = "vertical",
                                      num_axis_features = vertical_feature_count,
                                      feature_name = "original",
@@ -99,7 +123,7 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
             plt.close('all')
             
             # Save out the correlation heatmap
-            savePlotFigure(original_self_plot,
+            savePlotFigure(original_self_corr_plot,
                            plot_name=f"{dataset_name}_{CORRELATION_METHOD.lower()}_corr_original_v_original_{extraction_method.lower()}_plot.png",
                            output_dir_path=heatmap_dir_path)
             
@@ -111,7 +135,7 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
 
         print(f"Making {negative_control} self-correlation plots...")
         # Plot the correlation heatmap for the negative control vs negative control
-        negative_control_self_plot, negative_control_self_corr_dist_plot = makeBothSelfCorrelationPlots(correlation_matrix = feature_correlation_matrix,
+        negative_control_self_corr_plot, negative_control_self_corr_dist_plot = makeBothSelfCorrelationPlots(correlation_matrix = feature_correlation_matrix,
                                                                                                     axis = "horizontal",
                                                                                                     num_axis_features = horizontal_feature_count,
                                                                                                     feature_name = negative_control,
@@ -124,7 +148,7 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
         plt.close('all')
 
         # Save out the correlation heatmap
-        savePlotFigure(negative_control_self_plot,
+        savePlotFigure(negative_control_self_corr_plot,
                        plot_name=f"{dataset_name}_{CORRELATION_METHOD.lower()}_corr_{negative_control}_v_{negative_control}_{extraction_method.lower()}_plot.png",
                        output_dir_path=heatmap_dir_path)
         
