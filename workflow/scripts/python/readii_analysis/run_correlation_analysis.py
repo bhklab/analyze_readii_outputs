@@ -18,7 +18,8 @@ from readii_analysis.analyze.correlation_functions import (
     makeBothCrossCorrelationPlots)
 
 
-def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_feature_dir:str, 
+def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_feature_dir:str,
+                             correlation_method:Optional[str] = "pearson", corr_color_map:Optional[str] = "nipy_spectral",
                              self_dist_num_bins:Optional[int] = 450, self_dist_y_upper_bound:Optional[int] = None,
                              cross_dist_num_bins:Optional[int] = 450, cross_dist_y_upper_bound:Optional[int] = None):
     """ Function to run correlation analysis for a dataset.
@@ -31,6 +32,10 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
         Name of the extraction method to use for the correlation analysis. Must be either "radiomic" or "deep_learning".
     extracted_feature_dir : str
         Path to the directory containing the extracted feature csv files.
+    correlation_method : str, optional
+        Correlation method to use for the correlation analysis. The default is "pearson".
+    corr_color_map : str, optional
+        Color map to use for the correlation plots. The default is "nipy_spectral".
     self_dist_num_bins : int, optional
         Number of bins to use for the self-correlation distribution plots. The default is 450.
     self_dist_y_upper_bound : int, optional
@@ -50,10 +55,6 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
     PROC_DATA_PATH = "../../../procdata/"
     RESULTS_DATA_PATH = f"../../../results/"
     CONFIG_DIR_PATH = "../../config/"
-    CORRELATION_METHOD = "pearson"
-    # DIST_NUM_BINS = 450
-    # DIST_Y_UPPER_BOUND = None
-    CORR_COLOR_MAP = "nipy_spectral"
 
     # Load config file
     config = loadImageDatasetConfig(dataset_name, CONFIG_DIR_PATH)
@@ -100,7 +101,7 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
         # Perform the correlation - will return a dataframe that has length and width of 2x the number of features
         feature_correlation_matrix = getFeatureCorrelations(vertical_features = vertical_features,
                                                             horizontal_features = horizontal_features,
-                                                            method = CORRELATION_METHOD,
+                                                            method = correlation_method,
                                                             vertical_feature_name="original",
                                                             horizontal_feature_name=negative_control)
 
@@ -114,22 +115,22 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
                                      axis = "vertical",
                                      num_axis_features = vertical_feature_count,
                                      feature_name = "original",
-                                     corr_cmap = CORR_COLOR_MAP,
+                                     corr_cmap = corr_color_map,
                                      dist_num_bins = self_dist_num_bins,
                                      dist_y_upper_bound = self_dist_y_upper_bound,
-                                     correlation_method = CORRELATION_METHOD,
+                                     correlation_method = correlation_method,
                                      extraction_method = extraction_method,
                                      dataset_name = dataset_name)
             plt.close('all')
             
             # Save out the correlation heatmap
             savePlotFigure(original_self_corr_plot,
-                           plot_name=f"{dataset_name}_{CORRELATION_METHOD.lower()}_corr_original_v_original_{extraction_method.lower()}_plot.png",
+                           plot_name=f"{dataset_name}_{correlation_method.lower()}_corr_original_v_original_{extraction_method.lower()}_plot.png",
                            output_dir_path=heatmap_dir_path)
             
             # Save out the distribution plot
             savePlotFigure(original_self_corr_dist_plot,
-                           plot_name=f"{dataset_name}_{CORRELATION_METHOD.lower()}_corr_dist_original_v_original_{extraction_method.lower()}_plot.png",
+                           plot_name=f"{dataset_name}_{correlation_method.lower()}_corr_dist_original_v_original_{extraction_method.lower()}_plot.png",
                            output_dir_path=dist_dir_path)
         # End make original plots section
 
@@ -139,22 +140,22 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
                                                                                                     axis = "horizontal",
                                                                                                     num_axis_features = horizontal_feature_count,
                                                                                                     feature_name = negative_control,
-                                                                                                    corr_cmap = CORR_COLOR_MAP,
+                                                                                                    corr_cmap = corr_color_map,
                                                                                                     dist_num_bins = self_dist_num_bins,
                                                                                                     dist_y_upper_bound = self_dist_y_upper_bound,
-                                                                                                    correlation_method = CORRELATION_METHOD,
+                                                                                                    correlation_method = correlation_method,
                                                                                                     extraction_method = extraction_method,
                                                                                                     dataset_name = dataset_name)
         plt.close('all')
 
         # Save out the correlation heatmap
         savePlotFigure(negative_control_self_corr_plot,
-                       plot_name=f"{dataset_name}_{CORRELATION_METHOD.lower()}_corr_{negative_control}_v_{negative_control}_{extraction_method.lower()}_plot.png",
+                       plot_name=f"{dataset_name}_{correlation_method.lower()}_corr_{negative_control}_v_{negative_control}_{extraction_method.lower()}_plot.png",
                        output_dir_path=heatmap_dir_path)
         
         # Save out the distribution plot
         savePlotFigure(negative_control_self_corr_dist_plot,
-                       plot_name=f"{dataset_name}_{CORRELATION_METHOD.lower()}_corr_dist_{negative_control}_v_{negative_control}_{extraction_method.lower()}_plot.png",
+                       plot_name=f"{dataset_name}_{correlation_method.lower()}_corr_dist_{negative_control}_v_{negative_control}_{extraction_method.lower()}_plot.png",
                        output_dir_path=dist_dir_path)
         
 
@@ -165,21 +166,21 @@ def run_correlation_analysis(dataset_name:str, extraction_method:str, extracted_
                                                                               num_vertical_features = vertical_feature_count,
                                                                               vertical_feature_name = "original",
                                                                               horizontal_feature_name =  negative_control,
-                                                                              corr_cmap = CORR_COLOR_MAP,
+                                                                              corr_cmap = corr_color_map,
                                                                               dist_num_bins = cross_dist_num_bins,
                                                                               dist_y_upper_bound = cross_dist_y_upper_bound,
-                                                                              correlation_method = CORRELATION_METHOD,
+                                                                              correlation_method = correlation_method,
                                                                               extraction_method = extraction_method,
                                                                               dataset_name = dataset_name)
         plt.close('all')
         
         
         savePlotFigure(orig_vs_neg_control_cross_corr_plot,
-                       plot_name=f"{dataset_name}_{CORRELATION_METHOD.lower()}_corr_original_v_{negative_control}_{extraction_method.lower()}_plot.png",
+                       plot_name=f"{dataset_name}_{correlation_method.lower()}_corr_original_v_{negative_control}_{extraction_method.lower()}_plot.png",
                        output_dir_path=heatmap_dir_path)
         
         savePlotFigure(orig_vs_neg_control_cross_corr_dist_plot,
-                       plot_name=f"{dataset_name}_{CORRELATION_METHOD.lower()}_corr_dist_original_v_{negative_control}_{extraction_method.lower()}_plot.png",
+                       plot_name=f"{dataset_name}_{correlation_method.lower()}_corr_dist_original_v_{negative_control}_{extraction_method.lower()}_plot.png",
                        output_dir_path=dist_dir_path)
 
     print("Done!")
