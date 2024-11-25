@@ -176,6 +176,7 @@ def plotCorrelationDistribution(correlation_matrix:pd.DataFrame,
     bin_values, bin_edges, _ = dist_ax.hist(correlation_vals, bins=num_bins)
     dist_ax.set_xlabel(xlabel)
     dist_ax.set_ylabel(ylabel)
+    dist_ax.set_xbound(-1.0, 1.0)
     dist_ax.set_ybound(y_lower_bound, y_upper_bound)
     plt.suptitle(title, fontsize=14)
     plt.title(subtitle, fontsize=10)
