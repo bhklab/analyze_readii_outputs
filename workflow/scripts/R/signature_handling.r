@@ -1,5 +1,5 @@
 source("workflow/scripts/R/cox_modelling.r")
-source("workflow/scripts/R/cox_io.r")
+source("workflow/scripts/R/io.r")
 
 
 #' Function to save out a CPH signature file with the trained weights. A signature file with the names of the features must already exist.
