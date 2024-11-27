@@ -192,7 +192,7 @@ trainMRMRCoxModel <- function(labelled_train_data,
     }
 
     # Initialize best solution CPH model report with empty values
-    best_solution = makeCPHModelReport()
+    best_solution_model_data = makeCPHModelReport()
 
     # Loop through solutions to fit CPH models and determine best one
     for (solution_idx in 1:n_solutions) {
@@ -221,13 +221,73 @@ trainMRMRCoxModel <- function(labelled_train_data,
         # Compare to best solution so far
         if (solution_c_index > best_solution$ci) {
             # Update best solution
-            best_solution <- makeCPHModelReport(solution_model_feature_weights, solution_performance_results)
+            best_solution_model_data <- makeCPHModelReport(solution_model_feature_weights, solution_performance_results)
         }
     }
 
-    return (best_solution)
+    return (best_solution_model_data)
 }
 
 
+trainKFoldMRMRCoxModel <- function(labelled_feature_data,
+                                   k = 5,
+                                   n_features = 30,
+                                   surv_time_label="survival_time_in_years",
+                                   surv_event_label="survival_event_binary" ) { #nolint
+    # Initialize list to store the feature weights and validation performance results for each fold
+    fold_results <- list()
+    # Initialize holder for best fold index
+    best_fold_idx <- 0
+    # Initialize empty best fold model CPH report
+    best_fold_model_data <- makeCPHModelReport()
 
+    # Generate k-fold cross-validation folds with the patient IDs 
+    folds <- caret::createFolds(labelled_feature_data$patient_ID, k = k)
+
+    for (i in 1:k) {
+        print(paste("Training fold:", i))
+
+        # Initialize empty CPH model report for the current fold
+        fold_results <- makeCPHModelReport()
+
+        # Get the training data for the current fold
+        train_fold <- labelled_feature_data[folds[[i]],]
+        # Get the validation data for the current fold
+        val_fold <- labelled_feature_data[-folds[[i]],]
+
+        # Run classic MRMR feature selection and train a CoxPH model on the selected features
+        trained_model_results <- trainMRMRCoxModel(train_fold,
+                                            n_features = n_features,
+                                            n_solutions = 1,
+                                            mrmr_method = 'classic',
+                                            surv_time_label = surv_time_label,
+                                            surv_event_label = surv_event_label)
+        # Get the trained weights for the model
+        selected_weights <- trained_model_results$features
+
+        # Run trained CPH model on the validation set
+        validation_performance_results <- testCoxModel(val_fold,
+                                surv_time_label = surv_time_label,
+                                surv_event_label = surv_event_label,
+                                model_feature_list = names(trained_weights),
+                                model_feature_weights = trained_weights)
+
+        # Organize the validation results into a named list
+        validation_model_data <- makeCPHModelReport(selected_weights, validation_performance_results)
+        # Store results for the current fold
+        list[[i]] <- validation_model_data
+
+        # Check if validation results are better than best fold results
+        if (validation_model_data$ci > best_fold_model_data$ci) {
+            # Update best fold model data
+            best_fold_model_data <- validation_model_data
+            # Update best fold index
+            best_fold_idx <- i
+        }
+    } # end for loop
+
+    k_fold_results <- list(best_fold_idx = best_fold_idx, best_fold_model_data = best_fold_model_data, fold_results = fold_results)
+
+    return(k_fold_results)
+}
 
