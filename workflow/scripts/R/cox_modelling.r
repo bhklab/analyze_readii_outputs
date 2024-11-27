@@ -236,7 +236,7 @@ trainKFoldMRMRCoxModel <- function(labelled_feature_data,
                                    surv_time_label="survival_time_in_years",
                                    surv_event_label="survival_event_binary" ) { #nolint
     # Initialize list to store the feature weights and validation performance results for each fold
-    fold_results <- list()
+    all_fold_results <- list()
     # Initialize holder for best fold index
     best_fold_idx <- 0
     # Initialize empty best fold model CPH report
@@ -247,9 +247,6 @@ trainKFoldMRMRCoxModel <- function(labelled_feature_data,
 
     for (i in 1:k) {
         print(paste("Training fold:", i))
-
-        # Initialize empty CPH model report for the current fold
-        fold_results <- makeCPHModelReport()
 
         # Get the training data for the current fold
         train_fold <- labelled_feature_data[-folds[[i]],]
@@ -276,7 +273,7 @@ trainKFoldMRMRCoxModel <- function(labelled_feature_data,
         # Organize the validation results into a named list
         validation_model_data <- makeCPHModelReport(train_selected_weights, validation_performance_results)
         # Store results for the current fold
-        list[[i]] <- validation_model_data
+        all_fold_results[[i]] <- validation_model_data
 
         # Check if validation results are better than best fold results
         if (validation_model_data$ci > best_fold_model_data$ci) {
@@ -287,7 +284,7 @@ trainKFoldMRMRCoxModel <- function(labelled_feature_data,
         }
     } # end for loop
 
-    k_fold_results <- list(best_fold_idx = best_fold_idx, best_fold_model_data = best_fold_model_data, fold_results = fold_results)
+    k_fold_results <- list(best_fold_idx = best_fold_idx, best_fold_model_data = best_fold_model_data, all_fold_results = all_fold_results)
 
     return(k_fold_results)
 }
