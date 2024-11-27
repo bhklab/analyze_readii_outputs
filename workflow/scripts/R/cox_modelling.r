@@ -2,6 +2,7 @@
 # install.packages("BiocManager", repos = "http://cran.us.r-project.org")
 # install.packages("mRMRe", repos = "http://cran.us.r-project.org")
 # install.packages("checkmate", repos = "http://cran.us.r-project.org")
+# install.packages("caret", repos = "http://cran.us.r-project.org")
 # BiocManager::install("survcomp")
 
 source("workflow/scripts/R/io.r")
@@ -11,7 +12,7 @@ source("workflow/scripts/R/mrmr_functions.r")
 library(survival)
 library(survcomp)
 library(tools)
-# library(caret)
+library(caret)
 library(checkmate)
 library(mRMRe)
 
@@ -54,7 +55,7 @@ library(mRMRe)
 
 #             if (val_ci > best_ci) {
 #                 best_ci <- val_ci
-#                 best_k <- k_mrmr
+#                 best_k <- k_mrmr``
 #                 best_feats <- mrmr_feature_list
 #                 best_coefs <- coefs
 #             }
@@ -125,7 +126,7 @@ testCoxModel <- function(labelled_feature_data,
     test_feature_data <- tryCatch({
         labelled_feature_data[, model_feature_list]
     }, error = function(e) {
-        stop(paste("testCoxModel:Model features not found in provided feature set:", model_feature_list))
+        stop(paste("testCoxModel:Model features not found in provided feature set:", model_feature_list, "\n"))
     })
 
     # Convert the features dataframe to a matrix
@@ -219,7 +220,7 @@ trainMRMRCoxModel <- function(labelled_train_data,
         solution_c_index <- solution_performance_results$c.index
 
         # Compare to best solution so far
-        if (solution_c_index > best_solution$ci) {
+        if (solution_c_index > best_solution_model_data$ci) {
             # Update best solution
             best_solution_model_data <- makeCPHModelReport(solution_model_feature_weights, solution_performance_results)
         }
@@ -251,9 +252,9 @@ trainKFoldMRMRCoxModel <- function(labelled_feature_data,
         fold_results <- makeCPHModelReport()
 
         # Get the training data for the current fold
-        train_fold <- labelled_feature_data[folds[[i]],]
+        train_fold <- labelled_feature_data[-folds[[i]],]
         # Get the validation data for the current fold
-        val_fold <- labelled_feature_data[-folds[[i]],]
+        val_fold <- labelled_feature_data[folds[[i]],]
 
         # Run classic MRMR feature selection and train a CoxPH model on the selected features
         trained_model_results <- trainMRMRCoxModel(train_fold,
@@ -263,17 +264,17 @@ trainKFoldMRMRCoxModel <- function(labelled_feature_data,
                                             surv_time_label = surv_time_label,
                                             surv_event_label = surv_event_label)
         # Get the trained weights for the model
-        selected_weights <- trained_model_results$features
+        train_selected_weights <- trained_model_results$features
 
         # Run trained CPH model on the validation set
         validation_performance_results <- testCoxModel(val_fold,
                                 surv_time_label = surv_time_label,
                                 surv_event_label = surv_event_label,
-                                model_feature_list = names(trained_weights),
-                                model_feature_weights = trained_weights)
+                                model_feature_list = names(train_selected_weights),
+                                model_feature_weights = train_selected_weights)
 
         # Organize the validation results into a named list
-        validation_model_data <- makeCPHModelReport(selected_weights, validation_performance_results)
+        validation_model_data <- makeCPHModelReport(train_selected_weights, validation_performance_results)
         # Store results for the current fold
         list[[i]] <- validation_model_data
 
