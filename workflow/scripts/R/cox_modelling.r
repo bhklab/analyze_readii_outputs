@@ -16,52 +16,6 @@ library(caret)
 library(checkmate)
 library(mRMRe)
 
-# #' Function to train a CoxPH model to make a signature based on a set of features.
-# #' Will return the trained weights for the model.
-# #'
-# #' @param train_data Data.frame containing the training features with outcome labels included.
-# #' @param val_data Data.frame containing the validation features with outcome labels included.
-# #' @param surv_time_label Label for the time column in the training features file.
-# #' @param surv_event_label Label for the event column in the training features file.
-# #' @param model_feature_list List of feature names to use for the Cox model.
-# #' @param start Starting number of features to use for MRMR model training. Default is 2.
-# #' @param end Ending number of features to use for MRMR model training. Default is 50.
-# #' @param by Increment for number of features to use for MRMR model training. Default is 2.
-# #' 
-# #' @return vector of trained weights.
-# trainMRMRCoxModel <- function(train_data,
-#                               val_data,
-#                               surv_time_label,
-#                               surv_event_label,
-#                               model_feature_list,
-#                               start=2,
-#                               end=50,
-#                               by=2){
-#     best_ci <- 0
-#     for (k_mrmr in seq(start, end, by=by)) {
-#             print(paste("Starting k_mrmr:", k_mrmr))
-#             mrmr_idx = runMRMR(train_data[,model_feature_list], n_features=k_mrmr)
-#             mrmr_feature_list = names(train_data[,model_feature_list])[mrmr_idx]
-
-#             coefs <- trainCoxModel(train_data,
-#                                    surv_time_label,
-#                                    surv_event_label,
-#                                    mrmr_feature_list)   
-#                         val_ci <- testCoxModel(val_data,
-#                                    surv_time_label,
-#                                    surv_event_label,
-#                                    mrmr_feature_list,
-#                                    coefs)$c.index
-
-#             if (val_ci > best_ci) {
-#                 best_ci <- val_ci
-#                 best_k <- k_mrmr``
-#                 best_feats <- mrmr_feature_list
-#                 best_coefs <- coefs
-#             }
-#         }
-#     return(setNames(as.list(best_coefs), best_feats))
-# }
 
 #' Function to train a CoxPH model to make a signature based on a set of features.
 #' Will return the trained weights for the model.
