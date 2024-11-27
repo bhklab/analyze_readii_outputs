@@ -1,5 +1,3 @@
-
-
 #' Function to load in the feature data file for CPH model training or testing
 #'
 #' @param data_file_path A string path to the file to load.
