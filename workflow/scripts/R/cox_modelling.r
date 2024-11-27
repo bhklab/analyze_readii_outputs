@@ -180,5 +180,50 @@ testCoxModel <- function(labelled_feature_data,
 }
 
 
+trainMRMRCoxModel <- function(labelled_train_data,
+                              n_features,
+                              n_solutions,
+                              mrmr_method='bootstrap',
+                              surv_time_label="survival_time_in_years",
+                              surv_event_label="survival_event_binary") {
 
+    # Get the feature data for the training set with outcome labels removed
+    train_feature_data <- dropLabelsFromFeatureData(labelled_train_data, labels_to_drop=c("patient_ID", surv_time_label, surv_event_label))
+    
+    
+    # Perform mRMR feature selection using the specified method
+    if (mrmr_method == 'classic' | n_solutions == 1) {
+        all_mrmr_solutions_matrix <- runMRMRClassic(train_feature_data, n_features)
+    } else if (mrmr_method == 'bootstrap') {
+        # Will return a n_features x n_solutions matrix with feature indices into train_data as values
+        all_mrmr_solutions_matrix <- runMRMRBootstrap(train_feature_data,
+                                        n_features,
+                                        n_solutions)
+    } else { # Have this here so future methods can be added (e.g. exhaustive mRMRe)
+        print('Error: Invalid mRMR method')
+        return(NULL)
+    }
+
+    # Initialize best solution holder variables
+    best_c_index = 0
+    best_features_and_weights = list()
+
+    # Loop through solutions to fit CPH models and determine best one
+    for (solution_idx in 1:n_solutions) {
+        print(paste("Solution", solution_idx))
+        # Get the solution, will be a vector of length n_features
+        solution_feature_indices <- all_mrmr_solutions_matrix[,solution_idx]
+
+        # # Get the feature names for the solution to pass to the Cox model
+        solution_feature_names <- names(train_feature_data)[solution_feature_indices]
+
+        # Train the Cox model with the solution features
+        solution_cph_coefficients <- trainCoxModel(labelled_train_data,
+                                                    surv_time_label = surv_time_label,
+                                                    surv_event_label = surv_event_label,
+                                                    model_feature_list = solution_feature_names)
+    
+        
+    }
+}
 
