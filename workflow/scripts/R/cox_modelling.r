@@ -6,7 +6,6 @@
 
 source("workflow/scripts/R/io.r")
 source("workflow/scripts/R/data_processing.r")
-source("workflow/scripts/R/signature_handling.r")
 source("workflow/scripts/R/mrmr_functions.r")
 
 library(survival)
