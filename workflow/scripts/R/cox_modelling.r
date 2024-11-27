@@ -62,27 +62,6 @@ library(mRMRe)
 #     return(setNames(as.list(best_coefs), best_feats))
 # }
 
-# trainKFoldCoxModel <- function(labelled_feature_data,
-#                                surv_time_label,
-#                                surv_event_label,
-#                                model_feature_list,
-#                                k){ #nolint
-#     trained_weights <- list()
-#     folds <- createFolds(labelled_feature_data$patient_ID, k = k)
-#     for (i in 1:k) {
-#         print(paste("Training fold:", i))
-#         train_fold <- labelled_feature_data[folds[[i]],]
-#         val_fold <- labelled_feature_data[-folds[[i]],]
-#         trained_model <- trainMRMRCoxModel(train_fold,
-#                                                   val_fold,
-#                                                   surv_time_label = "survival_time_in_years",
-#                                                   surv_event_label = "survival_event_binary",
-#                                                   model_feature_list = model_feature_list)
-#         trained_weights[[i]] <- trained_model
-#         }
-#     return(trained_weights)
-# }
-
 #' Function to train a CoxPH model to make a signature based on a set of features.
 #' Will return the trained weights for the model.
 #' 
@@ -91,7 +70,7 @@ library(mRMRe)
 #' @param surv_event_label Label for the event column in the training features file.
 #' @param model_feature_list List of feature names to use for the Cox model.
 #' 
-#' @return vector of trained weights.
+#' @return vector of trained weights with feature names.
 trainCoxModel <- function(labelled_feature_data,
                           surv_time_label,
                           surv_event_label,
@@ -178,17 +157,26 @@ testCoxModel <- function(labelled_feature_data,
     return(performance_results)
 }
 
-
+#' Function to run MRMR feature selection and train a CoxPH model on the selected features.
+#' Returns the feature weights and performance results for the best performing model based on the concordance index.
+#' 
+#' @param labelled_train_data Data.frame containing the training features with outcome labels included.
+#' @param n_features Number of features to use for MRMR model training. Default is 30.
+#' @param n_solutions Number of solutions to use for MRMR model training. Default is 1. Must be greater than 1 for the bootstrap method.
+#' @param mrmr_method Name of the method to use for MRMR feature selection. Must be either "classic" or "bootstrap". The default is "classic".
+#' @param surv_time_label Label for the time column in labelled_train_data.
+#' @param surv_event_label Label for the event column in labelled_train_data.
+#' 
+#' @return A named list containing the model weights, concordance index, confidence intervals, and p-value for the best performing model.
 trainMRMRCoxModel <- function(labelled_train_data,
-                              n_features,
-                              n_solutions,
-                              mrmr_method='bootstrap',
+                              n_features = 30,
+                              n_solutions = 1,
+                              mrmr_method='classic',
                               surv_time_label="survival_time_in_years",
                               surv_event_label="survival_event_binary") {
 
     # Get the feature data for the training set with outcome labels removed
     train_feature_data <- dropLabelsFromFeatureData(labelled_train_data, labels_to_drop=c("patient_ID", surv_time_label, surv_event_label))
-    
     
     # Perform mRMR feature selection using the specified method
     if (mrmr_method == 'classic' | n_solutions == 1) {
@@ -199,30 +187,29 @@ trainMRMRCoxModel <- function(labelled_train_data,
                                         n_features,
                                         n_solutions)
     } else { # Have this here so future methods can be added (e.g. exhaustive mRMRe)
-        print('Error: Invalid mRMR method')
+        print('Error: Invalid mRMR method. Must be either "classic" or "bootstrap".')
         return(NULL)
     }
 
     # Initialize best solution holder variables
-    best_c_index = 0
-    best_features_and_weights = list()
+    # ci = concordance index, features = named list of model weights, 
+    # conf_lower = lower confidence interval, conf_upper = upper confidence interval, pval = p-value
+    best_solution = c(features = list(), ci = 0, conf_lower = 0, conf_upper = 0, pval = 0)
 
     # Loop through solutions to fit CPH models and determine best one
     for (solution_idx in 1:n_solutions) {
-        print(paste("Solution", solution_idx))
         # Get the solution, will be a vector of length n_features
         solution_feature_indices <- all_mrmr_solutions_matrix[,solution_idx]
 
         # # Get the feature names for the solution to pass to the Cox model
         solution_feature_names <- names(train_feature_data)[solution_feature_indices]
-        print(paste("Solution features:", solution_feature_names))
 
         # Train the Cox model with the solution features
+        # Returns a named list of model weights
         solution_model_feature_weights <- trainCoxModel(labelled_train_data,
                                                     surv_time_label = surv_time_label,
                                                     surv_event_label = surv_event_label,
                                                     model_feature_list = solution_feature_names)
-        print(paste("Solution model weights:", solution_model_feature_weights))
     
         # Get the model performance with the solution weights
         solution_performance_results <- testCoxModel(labelled_train_data,
@@ -234,12 +221,38 @@ trainMRMRCoxModel <- function(labelled_train_data,
         solution_c_index <- solution_performance_results$c.index
 
         # Compare to best solution so far
-        if (solution_c_index > best_c_index) {
+        if (solution_c_index > best_solution$ci) {
             # Update best solution
-            best_c_index <- solution_c_index
-            best_features_and_weights <- solution_model_feature_weights
+            best_solution$ci <- solution_c_index
+            best_solution$features <- solution_model_feature_weights
+            best_solution$conf_lower <- solution_performance_results$lower
+            best_solution$conf_upper <- solution_performance_results$upper
+            best_solution$pval <- solution_performance_results$p.value
         }
     }
-    return (best_features_and_weights)
+
+    return (best_solution)
 }
+
+
+# trainKFoldCoxModel <- function(labelled_feature_data,
+#                                surv_time_label,
+#                                surv_event_label,
+#                                model_feature_list,
+#                                k = 5){ #nolint
+#     trained_weights <- list()
+#     folds <- createFolds(labelled_feature_data$patient_ID, k = k)
+#     for (i in 1:k) {
+#         print(paste("Training fold:", i))
+#         train_fold <- labelled_feature_data[folds[[i]],]
+#         val_fold <- labelled_feature_data[-folds[[i]],]
+#         trained_model <- trainMRMRCoxModel(train_fold,
+#                                                   val_fold,
+#                                                   surv_time_label = "survival_time_in_years",
+#                                                   surv_event_label = "survival_event_binary",
+#                                                   model_feature_list = model_feature_list)
+#         trained_weights[[i]] <- trained_model
+#         }
+#     return(trained_weights)
+# }
 
