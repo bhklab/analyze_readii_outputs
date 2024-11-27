@@ -191,10 +191,8 @@ trainMRMRCoxModel <- function(labelled_train_data,
         return(NULL)
     }
 
-    # Initialize best solution holder variables
-    # ci = concordance index, features = named list of model weights, 
-    # conf_lower = lower confidence interval, conf_upper = upper confidence interval, pval = p-value
-    best_solution = c(features = list(), ci = 0, conf_lower = 0, conf_upper = 0, pval = 0)
+    # Initialize best solution CPH model report with empty values
+    best_solution = makeCPHModelReport()
 
     # Loop through solutions to fit CPH models and determine best one
     for (solution_idx in 1:n_solutions) {
@@ -223,11 +221,7 @@ trainMRMRCoxModel <- function(labelled_train_data,
         # Compare to best solution so far
         if (solution_c_index > best_solution$ci) {
             # Update best solution
-            best_solution$ci <- solution_c_index
-            best_solution$features <- solution_model_feature_weights
-            best_solution$conf_lower <- solution_performance_results$lower
-            best_solution$conf_upper <- solution_performance_results$upper
-            best_solution$pval <- solution_performance_results$p.value
+            best_solution <- makeCPHModelReport(solution_model_feature_weights, solution_performance_results)
         }
     }
 
@@ -235,24 +229,5 @@ trainMRMRCoxModel <- function(labelled_train_data,
 }
 
 
-# trainKFoldCoxModel <- function(labelled_feature_data,
-#                                surv_time_label,
-#                                surv_event_label,
-#                                model_feature_list,
-#                                k = 5){ #nolint
-#     trained_weights <- list()
-#     folds <- createFolds(labelled_feature_data$patient_ID, k = k)
-#     for (i in 1:k) {
-#         print(paste("Training fold:", i))
-#         train_fold <- labelled_feature_data[folds[[i]],]
-#         val_fold <- labelled_feature_data[-folds[[i]],]
-#         trained_model <- trainMRMRCoxModel(train_fold,
-#                                                   val_fold,
-#                                                   surv_time_label = "survival_time_in_years",
-#                                                   surv_event_label = "survival_event_binary",
-#                                                   model_feature_list = model_feature_list)
-#         trained_weights[[i]] <- trained_model
-#         }
-#     return(trained_weights)
-# }
+
 
