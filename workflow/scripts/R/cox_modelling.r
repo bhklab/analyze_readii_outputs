@@ -215,14 +215,31 @@ trainMRMRCoxModel <- function(labelled_train_data,
 
         # # Get the feature names for the solution to pass to the Cox model
         solution_feature_names <- names(train_feature_data)[solution_feature_indices]
+        print(paste("Solution features:", solution_feature_names))
 
         # Train the Cox model with the solution features
-        solution_cph_coefficients <- trainCoxModel(labelled_train_data,
+        solution_model_feature_weights <- trainCoxModel(labelled_train_data,
                                                     surv_time_label = surv_time_label,
                                                     surv_event_label = surv_event_label,
                                                     model_feature_list = solution_feature_names)
+        print(paste("Solution model weights:", solution_model_feature_weights))
     
-        
+        # Get the model performance with the solution weights
+        solution_performance_results <- testCoxModel(labelled_train_data,
+                                                    surv_time_label = surv_time_label,
+                                                    surv_event_label = surv_event_label,
+                                                    model_feature_list = solution_feature_names,
+                                                    model_feature_weights = solution_model_feature_weights)
+        # Get the concordance index for the solution
+        solution_c_index <- solution_performance_results$c.index
+
+        # Compare to best solution so far
+        if (solution_c_index > best_c_index) {
+            # Update best solution
+            best_c_index <- solution_c_index
+            best_features_and_weights <- solution_model_feature_weights
+        }
     }
+    return (best_features_and_weights)
 }
 
