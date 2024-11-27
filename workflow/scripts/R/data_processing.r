@@ -18,6 +18,7 @@ dropLabelsFromFeatureData <- function(labelled_feature_data, labels_to_drop) {
     return(feature_data_only)
 }
 
+
 #' Function to make a report for a trained CPH model. If no inputs are provided, will provide an empty version
 #' of the report to use for initialization. 
 #' 
@@ -32,7 +33,13 @@ makeCPHModelReport <- function(model_feature_weights = list(),
     model_data <- c(features = list(), ci = 0, conf_lower = 0, conf_upper = 0, pval = 0)
 
     # Store the model feature weights if provided
-    if (length(model_feature_weights) > 0) { model_data$features = model_feature_weights }    
+    if (length(model_feature_weights) > 0) { 
+        # Remove any stray ` characters from the feature names
+        names(model_feature_weights) <- gsub("`", "", names(model_feature_weights))
+        
+        # Store the named model feature weights
+        model_data$features = model_feature_weights 
+    }    
     
     # Store a subset of the performance results if provided
     if (length(performance_results) > 0) {
