@@ -36,9 +36,9 @@ makeCPHModelReport <- function(model_feature_weights = list(),
     
     # Store a subset of the performance results if provided
     if (length(performance_results) > 0) {
-        model_data$ci = performance_results$c.index,
-        model_data$conf_lower = performance_results$lower,
-        model_data$conf_upper = performance_results$upper,
+        model_data$ci = performance_results$c.index
+        model_data$conf_lower = performance_results$lower
+        model_data$conf_upper = performance_results$upper
         model_data$pval = performance_results$p.value
     }
 
