@@ -16,7 +16,7 @@ source("workflow/scripts/R/data_processing.r")
 runMRMRClassic <- function(feature_data, 
                            n_features = 30) {
     # setup data for the mRMRe function
-    mrmr_feature_data <- mRMR.data(data=data)
+    mrmr_feature_data <- mRMR.data(data= feature_data)
 
     # run MRMR with classic method 
     mrmr_results <- mRMR.classic(data = mrmr_feature_data,   
@@ -24,9 +24,9 @@ runMRMRClassic <- function(feature_data,
                                  feature_count = n_features)
 
     # Extract a vector contain n_feature feature indices into feature_data
-    fmcib_indices <- solutions(fmcib_results)[[1]]
+    mrmr_solution_feature_indices <- solutions(mrmr_results)[[1]]
 
-    return(fmcib_indices)
+    return(mrmr_solution_feature_indices)
 }
 
 
