@@ -68,3 +68,7 @@ Processed data = filtered clinical, radiomic, and deep learning features, possib
 - [ ] Implement config file creation if one is not present
 - [ ] Move data_setup_for_modelling from scripts into notebooks
 - [ ] Finish implementing survival time and event setup as functions
+- [x] Supports MRMR training over k folds
+- [ ] Doesn't support MRMR training over 1 fold
+- [ ] Doesn't support regular training over k folds
+- [ ] Doesn't support loading model weights across k folds

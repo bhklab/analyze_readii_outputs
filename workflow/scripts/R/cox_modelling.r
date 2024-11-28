@@ -1,31 +1,20 @@
+
+# install.packages("BiocManager", repos = "http://cran.us.r-project.org")
+# install.packages("mRMRe", repos = "http://cran.us.r-project.org")
+# install.packages("checkmate", repos = "http://cran.us.r-project.org")
+# install.packages("caret", repos = "http://cran.us.r-project.org")
+# BiocManager::install("survcomp")
+
+source("workflow/scripts/R/io.r")
+source("workflow/scripts/R/data_processing.r")
+source("workflow/scripts/R/mrmr_functions.r")
+
 library(survival)
 library(survcomp)
 library(tools)
-
-#' Function to load in the feature data file for CPH model training or testing
-#'
-#' @param data_file_path A string path to the file to load.
-#' 
-#' @return A data.table containing the loaded data.
-loadDataFile <- function(data_file_path) { #nolint
-    checkmate::assertFile(data_file_path, access = "r", extension = c("csv", "xlsx"))
-
-    switch(tools::file_ext(data_file_path),
-        "csv" = read.csv(data_file_path, header = TRUE, sep = ",", check.names = FALSE),
-        "xlsx" = readxl::read_excel(data_file_path)
-    ) 
-}
-
-
-#' Function to load in a YAML file with proper checks
-#'
-#' @param yaml_file_path A string path to the file to load.
-#' 
-#' @return A data.table containing the loaded data.
-loadYAMLFile <- function(yaml_file_path) { #nolint
-    checkmate::assertFile(yaml_file_path, access = "r", extension = "yaml")
-    yaml::read_yaml(yaml_file_path)
-}
+library(caret)
+library(checkmate)
+library(mRMRe)
 
 
 #' Function to train a CoxPH model to make a signature based on a set of features.
@@ -36,32 +25,28 @@ loadYAMLFile <- function(yaml_file_path) { #nolint
 #' @param surv_event_label Label for the event column in the training features file.
 #' @param model_feature_list List of feature names to use for the Cox model.
 #' 
-#' @return vector of trained weights.
-trainCoxModel <- function(train_labelled_features_file_path,
+#' @return vector of trained weights with feature names.
+trainCoxModel <- function(labelled_feature_data,
                           surv_time_label,
                           surv_event_label,
                           model_feature_list){ #nolint
-
-    # Load the feature data as a dataframe
-    labelled_feature_data <- loadDataFile(train_labelled_features_file_path)
-
      # Get just features selected for the model
     train_feature_data <- tryCatch({
         labelled_feature_data[, model_feature_list]
     }, error = function(e) {
-        stop(paste("Model features not found in provided feature set:", model_feature_list))
+        stop(paste("trainCoxModel:Model features not found in provided feature set:", model_feature_list))
     })
 
     # Get the time and event label columns from the feature data
     time_label <- tryCatch({
         labelled_feature_data[, surv_time_label]
     }, error = function(e) {
-        stop(paste("Time column not found in provided feature set:", surv_time_label))
+        stop(paste("trainCoxModel:Time column not found in provided feature set:", surv_time_label))
     })
     event_label <- tryCatch ({
         labelled_feature_data[, surv_event_label] 
     }, error = function(e) {
-    stop(paste("Event column not found in provided feature set:", surv_event_label))
+    stop(paste("trainCoxModel:Event column not found in provided feature set:", surv_event_label))
     })
 
     # Fit a CoxPH model to the training features
@@ -75,6 +60,7 @@ trainCoxModel <- function(train_labelled_features_file_path,
     return(model_fit$coefficients)
 }
 
+
 #' Function to test a CPH model with weights on a set of features.
 #' 
 #' @param test_labelled_features_file_path Path to the file containing the test features with outcome labels included.
@@ -84,20 +70,17 @@ trainCoxModel <- function(train_labelled_features_file_path,
 #' @param model_feature_weights Vector of weights for the Cox model
 #' 
 #' @return vector of test results.
-testCoxModel <- function(test_labelled_features_file_path,
+testCoxModel <- function(labelled_feature_data,
                          surv_time_label,
                          surv_event_label,
                          model_feature_list,
                          model_feature_weights){ #nolint
-
-    # Load the feature data as a dataframe
-    labelled_feature_data <- loadDataFile(test_labelled_features_file_path)
     
     # Get only features selected for the model
     test_feature_data <- tryCatch({
         labelled_feature_data[, model_feature_list]
     }, error = function(e) {
-        stop(paste("Model features not found in provided feature set:", model_feature_list))
+        stop(paste("testCoxModel:Model features not found in provided feature set:", model_feature_list, "\n"))
     })
 
     # Convert the features dataframe to a matrix
@@ -110,12 +93,12 @@ testCoxModel <- function(test_labelled_features_file_path,
     time_label <- tryCatch({
         labelled_feature_data[, surv_time_label]
     }, error = function(e) {
-        stop(paste("Time column not found in provided feature set:", surv_time_label))
+        stop(paste("testCoxModel:Time column not found in provided feature set:", surv_time_label))
     })
     event_label <- tryCatch ({
         labelled_feature_data[, surv_event_label] 
     }, error = function(e) {
-    stop(paste("Event column not found in provided feature set:", surv_event_label))
+    stop(paste("testCoxModel:Event column not found in provided feature set:", surv_event_label))
     })
 
     # Calculate concordance index for the test set
@@ -129,178 +112,134 @@ testCoxModel <- function(test_labelled_features_file_path,
     return(performance_results)
 }
 
-
-#' Function to save out a CPH signature file with the trained weights. A signature file with the names of the features must already exist.
+#' Function to run MRMR feature selection and train a CoxPH model on the selected features.
+#' Returns the feature weights and performance results for the best performing model based on the concordance index.
 #' 
-#' @param signature_name Name of the signature to load in signature names from yaml file. Will be saved out with the same name.
-#' @param model_feature_weights Vector of trained weights for the signature. Must have the same number of values as the number of features in the signature.
-#' @param output_dir Directory to save the signature file to. Default is "workflow/signatures/". Must end in a "/".
-#' @param overwrite_signature Boolean to indicate whether to overwrite existing signature weights. Default is FALSE.
+#' @param labelled_train_data Data.frame containing the training features with outcome labels included.
+#' @param n_features Number of features to use for MRMR model training. Default is 30.
+#' @param n_solutions Number of solutions to use for MRMR model training. Default is 1. Must be greater than 1 for the bootstrap method.
+#' @param mrmr_method Name of the method to use for MRMR feature selection. Must be either "classic" or "bootstrap". The default is "classic".
+#' @param surv_time_label Label for the time column in labelled_train_data.
+#' @param surv_event_label Label for the event column in labelled_train_data.
 #' 
-#' @return None
-saveSignatureYAML <- function(signature_name, model_feature_weights, output_dir = "workflow/signatures/", overwrite_signature = FALSE){ #nolint 
-    # Load in the signature file to get the feature names
-    signature <- loadSignatureYAML(signature_name)
+#' @return A named list containing the model weights, concordance index, confidence intervals, and p-value for the best performing model.
+trainMRMRCoxModel <- function(labelled_train_data,
+                              n_features = 30,
+                              n_solutions = 1,
+                              mrmr_method='classic',
+                              surv_time_label="survival_time_in_years",
+                              surv_event_label="survival_event_binary") {
 
-    # Check if signature weights already exist
-    if (signature$weights[1] != 0) {
-        # Check whether to overwrite the signature weights
-        if (overwrite_signature == TRUE) {
-            print("Signature weights are being overwritten.")
-        } else {
-            print("Signature weights already exist. Set overwriteSignature to TRUE to overwrite.")
-            stop()
+    # Get the feature data for the training set with outcome labels removed
+    train_feature_data <- dropLabelsFromFeatureData(labelled_train_data, labels_to_drop=c("patient_ID", surv_time_label, surv_event_label))
+    
+    # Perform mRMR feature selection using the specified method
+    if (mrmr_method == 'classic' | n_solutions == 1) {
+        all_mrmr_solutions_matrix <- runMRMRClassic(train_feature_data, n_features)
+    } else if (mrmr_method == 'bootstrap') {
+        # Will return a n_features x n_solutions matrix with feature indices into train_data as values
+        all_mrmr_solutions_matrix <- runMRMRBootstrap(train_feature_data,
+                                        n_features,
+                                        n_solutions)
+    } else { # Have this here so future methods can be added (e.g. exhaustive mRMRe)
+        print('Error: Invalid mRMR method. Must be either "classic" or "bootstrap".')
+        return(NULL)
+    }
+
+    # Initialize best solution CPH model report with empty values
+    best_solution_model_data = makeCPHModelReport()
+
+    # Loop through solutions to fit CPH models and determine best one
+    for (solution_idx in 1:n_solutions) {
+        # Get the solution, will be a vector of length n_features
+        solution_feature_indices <- all_mrmr_solutions_matrix[,solution_idx]
+
+        # # Get the feature names for the solution to pass to the Cox model
+        solution_feature_names <- names(train_feature_data)[solution_feature_indices]
+
+        # Train the Cox model with the solution features
+        # Returns a named list of model weights
+        solution_model_feature_weights <- trainCoxModel(labelled_train_data,
+                                                    surv_time_label = surv_time_label,
+                                                    surv_event_label = surv_event_label,
+                                                    model_feature_list = solution_feature_names)
+    
+        # Get the model performance with the solution weights
+        solution_performance_results <- testCoxModel(labelled_train_data,
+                                                    surv_time_label = surv_time_label,
+                                                    surv_event_label = surv_event_label,
+                                                    model_feature_list = solution_feature_names,
+                                                    model_feature_weights = solution_model_feature_weights)
+        # Get the concordance index for the solution
+        solution_c_index <- solution_performance_results$c.index
+
+        # Compare to best solution so far
+        if (solution_c_index > best_solution_model_data$ci) {
+            # Update best solution
+            best_solution_model_data <- makeCPHModelReport(solution_model_feature_weights, solution_performance_results)
         }
     }
 
-    # Make sure output directory ends in a "/"
-    if (endsWith(output_dir, "/") == FALSE) { output_dir <- paste(output_dir, "/", sep = "") }
-
-    # Convert model weights to list and set up names from existing signature file
-    model_feature_list <- as.list(model_feature_weights)
-    names(model_feature_list) <- signature$names
-
-    # Name the signature so ouptut is correctly formatted
-    final_signature <- list(signature = model_feature_list)
-
-    # Setupt output file name
-    output_file <- file(paste(output_dir, signature_name, ".yaml", sep = ""), "w")
-    # Write out the signature
-    yaml::write_yaml(final_signature, output_file)
-    close(output_file)
+    return (best_solution_model_data)
 }
 
 
-#' Function to read in a CPH signature file and get the feature names and weights
-#' 
-#' @param signature_name Name of the signature to read in, should have a signature.yaml file in the signatures folder. Weights are optional in the file.
-#' 
-#' @return list of feature names and weights
-loadSignatureYAML <- function(signature_name) { #nolint 
-    # Paste together the path to the signature file
-    signature_file_path <- paste("workflow/signatures/", signature_name, ".yaml", sep = "")
-    # Load the signature file
-    signature_config <- loadYAMLFile(signature_file_path)
-    # Names of the features in the signature
-    sig_feature_names <- names(signature_config$signature)
-    # Weights for the features in the signature
-    sig_weights <- matrix(unlist(signature_config$signature))
+trainKFoldMRMRCoxModel <- function(labelled_feature_data,
+                                   k = 5,
+                                   n_features = 30,
+                                   surv_time_label="survival_time_in_years",
+                                   surv_event_label="survival_event_binary" ) { #nolint
+    # Initialize list to store the feature weights and validation performance results for each fold
+    all_fold_results <- list()
+    # Initialize holder for best fold index
+    best_fold_idx <- 0
+    # Initialize empty best fold model CPH report
+    best_fold_model_data <- makeCPHModelReport()
 
-    signature <- list(sig_feature_names, sig_weights)
-    names(signature) <- c("names", "weights")
+    # Generate k-fold cross-validation folds with the patient IDs 
+    folds <- caret::createFolds(labelled_feature_data$patient_ID, k = k)
 
-    return(signature)
-}
+    for (i in 1:k) {
+        print(paste("Training fold:", i))
 
+        # Get the training data for the current fold
+        train_fold <- labelled_feature_data[-folds[[i]],]
+        # Get the validation data for the current fold
+        val_fold <- labelled_feature_data[folds[[i]],]
 
-#' Function to train a CoxPH model to make a signature based on a set of radiomic features.
-#' Will return the trained weights for the model.
-#' 
-#' @param datasetConfigFilePath Path to the config file for the dataset
-#' @param signatureName Name of the signature to train, should have a signature.yaml file in the signatures folder. If this has any weights, they will be overwritten.
-#' @param outputDir Directory to save the trained weights signature file to. Default is "workflow/signatures/".
-#' @param overwriteSignature Boolean to indicate whether to overwrite existing signature weights. Default is FALSE.
-#' @param testSignature Boolean to indicate whether to run test data on the signature. The dataset provided must have a training/test split. Default is FALSE.
-#' 
-#' @return vector of trained weights.
-createSignature <- function(dataset_config_file_path, signature_name, output_dir = "workflow/signatures/", overwrite_signature = FALSE, test_signature = FALSE) { #nolint
-    dataset_config <- loadYAMLFile(dataset_config_file_path)
-    # Name of the dataset to run CPH on
-    dataset_name <- dataset_config$dataset_name
+        # Run classic MRMR feature selection and train a CoxPH model on the selected features
+        trained_model_results <- trainMRMRCoxModel(train_fold,
+                                            n_features = n_features,
+                                            n_solutions = 1,
+                                            mrmr_method = 'classic',
+                                            surv_time_label = surv_time_label,
+                                            surv_event_label = surv_event_label)
+        # Get the trained weights for the model
+        train_selected_weights <- trained_model_results$features
 
-    # Check if dataset has a training/test split needed for signature creation
-    if (dataset_config$train_test_split$split == FALSE) {
-        print("Dataset must have a training subset to create a signature.")
-        stop()
-    }
+        # Run trained CPH model on the validation set
+        validation_performance_results <- testCoxModel(val_fold,
+                                surv_time_label = surv_time_label,
+                                surv_event_label = surv_event_label,
+                                model_feature_list = names(train_selected_weights),
+                                model_feature_weights = train_selected_weights)
 
-    # Signature setup - get the signature features and weights
-    signature <- loadSignatureYAML(signature_name)
-    sig_feature_names <- signature$names
-    sig_weights <- signature$weights
+        # Organize the validation results into a named list
+        validation_model_data <- makeCPHModelReport(train_selected_weights, validation_performance_results)
+        # Store results for the current fold
+        all_fold_results[[i]] <- validation_model_data
 
-    if (sig_weights[1] != 0) {
-        # Check whether to overwrite the signature weights
-        if (overwrite_signature == TRUE) {
-            print("Signature weights are being overwritten.")
-        } else {
-            print("Signature weights already exist. Set overwriteSignature to TRUE to overwrite.")
-            stop()
+        # Check if validation results are better than best fold results
+        if (validation_model_data$ci > best_fold_model_data$ci) {
+            # Update best fold model data
+            best_fold_model_data <- validation_model_data
+            # Update best fold index
+            best_fold_idx <- i
         }
-    }
+    } # end for loop
 
-    # Path to training radiomics features from the original image (not a negative control)
-    train_feature_file_path <- paste("procdata/", dataset_name, "/radiomics/train_test_split/train_features/train_labelled_radiomicfeatures_only_original_", dataset_name, ".csv", sep = "")
+    k_fold_results <- list(best_fold_idx = best_fold_idx, best_fold_model_data = best_fold_model_data, all_fold_results = all_fold_results)
 
-    # Fit a CoxPH model to the training radiomics features
-    trained_weights <- trainCoxModel(train_feature_file_path,
-                                     surv_time_label = "survival_time_in_years",
-                                     surv_event_label = "survival_event_binary",
-                                     model_feature_list = sig_feature_names)
-
-    # Save out the model weights for the signature as a yaml file
-    saveSignatureYAML(signature_name = signature_name,
-                      model_feature_weights = trained_weights,
-                      output_dir = output_dir,
-                      overwrite_signature = overwrite_signature)
-
-    # Apply the signature to the test set if specified
-    if (test_signature == TRUE) {
-        applySignature(dataset_config_file_path = dataset_config_file_path,
-                       signature_name = signature_name)
-    }
-
-    return(trained_weights)
-
+    return(k_fold_results)
 }
 
-
-#' Function to apply a trained CPH model to a test or validation set of radiomics features
-#' 
-#' @param dataset_config_file_path Path to the config file for the dataset
-#' @param signature_name Name of the signature to apply, should have a signature.yaml file in the signatures folder
-#' 
-#' @return None
-applySignature <- function(dataset_config_file_path, signature_name) { #nolint
-
-    # Load in the config file for the dataset
-    dataset_config <- loadYAMLFile(dataset_config_file_path)
-
-    # Name of the dataset to run CPH on
-    dataset_name <- dataset_config$dataset_name
-
-    # Signature setup - get the signature features and weights
-    signature <- loadSignatureYAML(signature_name)
-    sig_feature_names <- signature$names
-    sig_weights <- signature$weights
-
-    print(paste("DATASET: ", dataset_name))
-    print(paste("SIGNATURE: ", signature_name))
-
-    # Check if applying signature to test or validation set based on training/test split
-    if (dataset_config$train_test_split$split == TRUE) {
-        # Path to directory containing test radiomics features
-        feature_dir_path <- paste0("procdata/", dataset_name, "/radiomics/train_test_split/test_features", sep="")
-    } else {
-        # Path to directory containing validation radiomics features
-        feature_dir_path <- paste0("procdata/", dataset_name, "/radiomics/features", sep="")
-    }
-
-    # Get relative paths to all radiomic feature files containing the outcome labels and save in character vector
-    # test set will be test_labelled_radiomicfeatures_* and validation set will be train_labelled_radiomicfeatures_*
-    feature_files <- list.files(feature_dir_path, pattern="labelled.*\\.csv$", ignore.case=TRUE, full.names=TRUE)
-
-    # Run the signature CPH model on each feature set
-    cph_model_results <- lapply(feature_files, testCoxModel, 
-                                surv_time_label = "survival_time_in_years",
-                                surv_event_label = "survival_event_binary",
-                                model_feature_list = sig_feature_names,
-                                model_feature_weights = sig_weights)
-
-    #TODO: update this to just be the file name, not the full path
-    # Make the file path of the feature file the name of the list element
-    names(cph_model_results) <- feature_files
-
-    # Return the list of results
-    return(cph_model_results)
-}
