@@ -297,6 +297,9 @@ def splitDataSetup(dfClinical:DataFrame,
         Dictionary where keys are labels of columns in dfClinical to base the split upon and values is a list of values to select
         in each data split.
 
+    imputeValue : str, optional
+        Value to impute for missing values in the splitVariables. The default is None.
+
     Returns
     -------
     splitClinicalDataframes : dict
